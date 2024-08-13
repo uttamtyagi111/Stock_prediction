@@ -10,3 +10,4 @@ class EmailTemplate(models.Model):
 
     class Meta:
         ordering = ['name']
+        

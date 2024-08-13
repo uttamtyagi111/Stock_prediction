@@ -7,6 +7,8 @@ import csv
 from io import StringIO
 from .serializers import EmailSendSerializer
 from .models import EmailTemplate
+import time
+from datetime import datetime
 
 class SendEmailsView(APIView):
     def post(self, request, *args, **kwargs):
@@ -38,8 +40,9 @@ class SendEmailsView(APIView):
             for row in csv_reader:
                 email_list.append(row)
 
+            total_emails = len(email_list)
             try:
-                for recipient in email_list:
+                for i, recipient in enumerate(email_list):
                     recipient_email = recipient.get('Email')
                     recipient_firstName = recipient.get('firstName')
                     recipient_lastName = recipient.get('lastName')
@@ -67,17 +70,26 @@ class SendEmailsView(APIView):
                         to=[recipient_email]
                     )
                     email.content_subtype = 'html'  # Specify the content type as HTML
-                    
+
                     try:
                         email.send()
+                        status_message = f'Successfully sent to {recipient_email}'
                     except Exception as e:
-                        return Response({'error': f'Failed to send email to {recipient_email}: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
+                        status_message = f'Failed to send to {recipient_email}: {str(e)}'
+
+                    # Log the status, timestamp, and progress
+                    timestamp = datetime.now().isoformat()
+                    print(f'Timestamp: {timestamp} | Email: {recipient_email} | Status: {status_message}')
+                    print(f'Progress: {i + 1}/{total_emails} emails sent')
+
+                    time.sleep(15)  # Delay between sending emails
+
                 return Response({'status': 'Emails sent successfully!'}, status=status.HTTP_200_OK)
             except Exception as e:
                 return Response({'error': f'Failed to render template: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 from rest_framework import viewsets
 from .models import EmailTemplate
 from .serializers import EmailTemplateSerializer
