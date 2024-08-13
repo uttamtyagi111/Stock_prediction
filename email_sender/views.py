@@ -94,7 +94,6 @@ class SendEmailsView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = EmailSendSerializer(data=request.data)
         if serializer.is_valid():
-            # Retrieve sender and SMTP server information
             sender_id = serializer.validated_data['sender_id']
             smtp_server_id = serializer.validated_data['smtp_server_id']
             from_email = serializer.validated_data['from_email']
@@ -107,9 +106,7 @@ class SendEmailsView(APIView):
             email_list_file = request.FILES.get('email_list')
             template_id = request.data.get('template_id')
             
-            # print(f"Sender ID: {sender_id}")
-            # print(f"SMTP Server ID: {smtp_server_id}")
-            # print(f"Template ID: {template_id}")
+
 
             try:
                 sender = Sender.objects.get(id=sender_id)
@@ -166,13 +163,13 @@ class SendEmailsView(APIView):
                         status_message = f'Failed to send: {str(e)}'
                         failed_sends += 1
                         
-                    # Convert Unix timestamp to human-readable format
+                    
                     timestamp = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 
                     email_statuses.append({
                         'email': recipient_email,
                         'status': status_message,
-                        'timestamp': timestamp # Add timestamp
+                        'timestamp': timestamp
                     })
 
                 return Response({

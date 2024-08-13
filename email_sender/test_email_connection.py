@@ -2,22 +2,19 @@ import smtplib
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-# Get email credentials from environment variables
 email_user = os.getenv('EMAIL_HOST_USER')
 email_password = os.getenv('EMAIL_HOST_PASSWORD')
 
 try:
-    # Connect to the SMTP server
-    server = smtplib.SMTP('mail.wishgeekstechserve.com', 587)
-    server.starttls()  # Start TLS encryption
-    server.login(email_user, email_password)  # Login to the email account
 
-    # Send a test email
+    server = smtplib.SMTP('mail.wishgeekstechserve.com', 587)
+    server.starttls() 
+    server.login(email_user, email_password) 
+
     from_address = email_user
-    to_address = 'uttam@wishgeekstechserve.com'  # Replace with the recipient's email address
+    to_address = 'uttam@wishgeekstechserve.com'  
     subject = 'Test Email'
     body = 'This is a test email to check SMTP connection.'
 

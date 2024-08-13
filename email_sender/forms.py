@@ -1,4 +1,3 @@
-# email_sender/forms.py
 from django import forms
 from .models import Sender, SMTPServer
 

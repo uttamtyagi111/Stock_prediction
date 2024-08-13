@@ -4,16 +4,15 @@ from dotenv import load_dotenv
 import ssl
 from django.core.mail import get_connection, EmailMessage
 
-# Initialize environment variables
+
 load_dotenv() 
 
-# Build paths inside the project
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Email templates directory
+
 EMAIL_TEMPLATES_DIR = BASE_DIR / 'email_templates'
 
-# Secret key for the project
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
 DEBUG = True
@@ -86,7 +85,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email settings
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'mail.wishgeeks.com'
 EMAIL_PORT = 587
@@ -98,8 +97,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 
-# SSL context configuration (if required)
-# This part is optional and may be removed if the email server's SSL settings are correct
+
 class SSLDisableContext:
     def __enter__(self):
         self.ssl_context = ssl._create_unverified_context()
@@ -113,10 +111,9 @@ class SSLDisableContext:
     def __exit__(self, exc_type, exc_value, traceback):
         EmailMessage.get_connection = staticmethod(self.original_get_connection)
 
-# Apply SSL context disabling if needed
 SSLDisableContext()
 
-# Logging configuration
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

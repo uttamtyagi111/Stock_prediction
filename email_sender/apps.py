@@ -5,5 +5,4 @@ class EmailSenderConfig(AppConfig):
     name = 'email_sender'
 
     def ready(self):
-        # Perform startup tasks here, if any
         pass
