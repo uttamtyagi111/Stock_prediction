@@ -1,5 +1,15 @@
 from rest_framework import serializers
-from .models import EmailTemplate
+from .models import Sender, SMTPServer, EmailTemplate
+
+class SenderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sender
+        fields = '__all__'
+
+class SMTPServerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SMTPServer
+        fields = '__all__'
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -7,6 +17,8 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class EmailSendSerializer(serializers.Serializer):
+    sender_id = serializers.IntegerField()
+    smtp_server_id = serializers.IntegerField()
     from_email = serializers.EmailField()
     display_name = serializers.CharField()
     your_name = serializers.CharField()

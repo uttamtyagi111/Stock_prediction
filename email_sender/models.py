@@ -10,4 +10,33 @@ class EmailTemplate(models.Model):
 
     class Meta:
         ordering = ['name']
-        
+
+class Sender(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+
+    def __str__(self):
+        return self.name
+
+from rest_framework import serializers
+from .models import Sender
+
+class SenderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sender
+        fields = ['id', 'name', 'email', 'username', 'password']
+
+class SMTPServer(models.Model):
+    name = models.CharField(max_length=100)
+    host = models.CharField(max_length=255)
+    port = models.PositiveIntegerField()
+    username = models.CharField(max_length=100)
+    password = models.CharField(max_length=100)
+    use_tls = models.BooleanField(default=True)
+    use_ssl = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+
+
