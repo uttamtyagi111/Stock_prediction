@@ -4,22 +4,27 @@ from .models import Sender, SMTPServer, EmailTemplate
 class SenderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sender
-        fields = '__all__'
+        fields = ['id', 'name', 'email']
 
 class SMTPServerSerializer(serializers.ModelSerializer):
     class Meta:
         model = SMTPServer
-        fields = '__all__'
+        fields = ['id', 'name', 'host', 'port', 'username', 'password', 'use_tls', 'use_ssl']
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailTemplate
-        fields = '__all__'
+        fields = ['id', 'name', 'subject', 'body']
 
 class EmailSendSerializer(serializers.Serializer):
-    sender_id = serializers.IntegerField()
-    smtp_server_id = serializers.IntegerField()
-    from_email = serializers.EmailField()
+    sender_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True
+    )
+    smtp_server_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True
+    )
     display_name = serializers.CharField()
     your_name = serializers.CharField()
     your_company = serializers.CharField()
@@ -27,9 +32,16 @@ class EmailSendSerializer(serializers.Serializer):
     contact_info = serializers.CharField()
     website_url = serializers.URLField()
     email_list = serializers.FileField()
-    template_id = serializers.IntegerField()  # Include template_id
+    template_id = serializers.IntegerField()
     
     def validate_email_list(self, value):
         if not value.name.endswith('.csv'):
             raise serializers.ValidationError("Only CSV files are accepted.")
         return value
+
+    def validate(self, data):
+        if not data.get('sender_ids'):
+            raise serializers.ValidationError("At least one sender ID is required.")
+        if not data.get('smtp_server_ids'):
+            raise serializers.ValidationError("At least one SMTP server ID is required.")
+        return data

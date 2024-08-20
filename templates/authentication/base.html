@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My App{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <!-- Ensure these URL names match those in your URL configurations -->
+                <li><a href="{% url 'email:smtp-servers-list' %}">SMTP Servers</a></li>
+                <li><a href="{% url 'email:senders-list' %}">Senders</a></li>
+                <li><a href="{% url 'email:email-templates-list' %}">Email Templates</a></li>
+                <li><a href="{% url 'authentication:logout' %}">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+    <footer>
+        <p>&copy; {{ current_year }} My App</p>
+    </footer>
+</body>
+</html>
