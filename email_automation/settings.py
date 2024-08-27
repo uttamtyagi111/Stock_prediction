@@ -4,14 +4,17 @@ from dotenv import load_dotenv
 import ssl
 from django.core.mail import get_connection, EmailMessage
 
+load_dotenv()
 
-load_dotenv() 
-
-
+# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Directory settings for email templates
+ORIGINAL_TEMPLATES_DIR = BASE_DIR / 'original_email_templates'
+EDITED_TEMPLATES_DIR = BASE_DIR / 'edited_email_templates'
 
-EMAIL_TEMPLATES_DIR = BASE_DIR / 'email_templates'
+# Optional if needed
+EMAIL_TEMPLATES_DIR = BASE_DIR / 'templates'
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
@@ -19,8 +22,21 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+# settings.py
+
+# # Session settings
+# SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+# SESSION_COOKIE_NAME = 'sessionid'
+# SESSION_COOKIE_AGE = 1209600  # 2 weeks
+# SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+# SESSION_SAVE_EVERY_REQUEST = True
+# SESSION_COOKIE_SECURE = False  # Set to True in production
+# SESSION_COOKIE_HTTPONLY = True
+# SESSION_COOKIE_SAMESITE = 'Lax'
+
+
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/email/send-emails/'
+LOGIN_REDIRECT_URL = '/login/'
 LOGOUT_REDIRECT_URL = '/login/'
 
 INSTALLED_APPS = [
@@ -31,19 +47,55 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
     'authentication',
     'email_sender',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': 'your-secret-key',  # Change this to a secure key
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3001',
+    'https://127.0.0.1:3000',
+    
+]
+# Allow all origins
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'email_automation.urls'
 
@@ -66,15 +118,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'email_automation.wsgi.application'
 
 DATABASES = {
-    
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     },
 }
-    
 
 DATABASE_ROUTERS = ['authentication.database_router.DatabaseRouter']
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # Default
+]
+# AUTH_USER_MODEL = 'authentication.AppUser'
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -88,29 +144,23 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-
-MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
+MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'mail.wishgeeks.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# EMAIL_USE_SSL = False
+# EMAIL_USE_SSL = False  # Commented out as not used
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-
-
 
 class SSLDisableContext:
     def __enter__(self):
@@ -126,7 +176,6 @@ class SSLDisableContext:
         EmailMessage.get_connection = staticmethod(self.original_get_connection)
 
 SSLDisableContext()
-
 
 LOGGING = {
     'version': 1,
@@ -144,4 +193,3 @@ LOGGING = {
         },
     },
 }
-

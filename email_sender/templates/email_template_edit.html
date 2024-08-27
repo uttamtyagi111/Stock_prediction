@@ -73,7 +73,7 @@
             <ul>
                 <li><a href="{% url 'senders-list' %}">Senders</a></li>
                 <li><a href="{% url 'smtp-servers-list' %}">SMTP Servers</a></li>
-                <li><a href="{% url 'email_templates_list' %}">Email Templates</a></li>
+                <li><a href="{% url 'email-templates-list' %}">Email Templates</a></li>
                 <li><a href="{% url 'logout' %}">Logout</a></li>
             </ul>
         </nav>
@@ -85,7 +85,7 @@
             {{ form.as_p }}
             <button type="submit">Save Changes</button>
         </form>
-        <a href="{% url 'email_templates_list' %}">Back to list</a>
+        <a href="{% url 'email-templates-list' %}">Back to list</a>
     </main>
     <footer>
         <p>&copy; {{ current_year }} My App</p>

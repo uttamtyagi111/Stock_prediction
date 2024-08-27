@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Template</title>
+</head>
+<body>
+    <h1>Edit Template: {{ original_template.name }}</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <textarea name="content" rows="20" cols="80">{% if initial_content %}{{ initial_content }}{% else %}<!-- Default content here -->{% endif %}</textarea>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>

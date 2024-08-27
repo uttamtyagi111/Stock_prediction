@@ -79,13 +79,12 @@
     </header>
     <main>
         <h1>Email Templates List</h1>
-        <a href="{% url 'email-template-create' %}" class="btn">Create New Template</a>
+        <!-- <a href="{% url 'email-template-create' %}" class="btn">Create New Template</a> -->
         <table>
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Name</th>
-                    <th>Subject</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -94,10 +93,9 @@
                 <tr>
                     <td>{{ template.id }}</td>
                     <td>{{ template.name }}</td>
-                    <td>{{ template.subject }}</td>
                     <td>
-                        <a href="{% url 'email-template-edit' template.id %}">Edit</a>
-                        <a href="{% url 'email-template-delete' template.id %}" onclick="return confirm('Are you sure you want to delete this template?');">Delete</a>
+                        <a href="{% url 'edit_template' template.id %}">Edit</a>
+                        <!-- <a href="{% url 'email-template-delete' template.id %}" onclick="return confirm('Are you sure you want to delete this template?');">Delete</a> -->
                     </td>
                 </tr>
                 {% empty %}

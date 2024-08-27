@@ -5,11 +5,13 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     # Authentication URLs
-    path('auth/', include('authentication.urls')),
+    path('', include('authentication.urls')),
 
     # Email sender URLs
-    path('api/', include('email_sender.urls')),
+    path('', include('email_sender.urls')),
 
     # Admin URL
     path('admin/', admin.site.urls),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

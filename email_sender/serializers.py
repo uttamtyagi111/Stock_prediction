@@ -14,7 +14,8 @@ class SMTPServerSerializer(serializers.ModelSerializer):
 class EmailTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailTemplate
-        fields = ['id', 'name', 'subject', 'body']
+        fields = ['id', 'name', 'template_path'] 
+        
 
 class EmailSendSerializer(serializers.Serializer):
     sender_ids = serializers.ListField(
@@ -30,6 +31,7 @@ class EmailSendSerializer(serializers.Serializer):
     your_company = serializers.CharField()
     your_email = serializers.EmailField()
     contact_info = serializers.CharField()
+    subject = serializers.CharField(max_length=255) 
     website_url = serializers.URLField()
     email_list = serializers.FileField()
     template_id = serializers.IntegerField()

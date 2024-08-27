@@ -3,27 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <title>Senders List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        a {
+            color: red;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    <h1>Senders List</h1>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for sender in senders %}
-            <tr>
-                <td>{{ sender.id }}</td>
-                <td>{{ sender.name }}</td>
-                <td>{{ sender.email }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <a href="{% url 'sender-create' %}">Create New Sender</a>
+    <div class="container">
+        <h1>Senders List</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sender in senders %}
+                <tr>
+                    <td>{{ sender.id }}</td>
+                    <td>{{ sender.name }}</td>
+                    <td>{{ sender.email }}</td>
+                    <td>
+                        <a href="{% url 'sender-delete' sender.pk %}" onclick="return confirm('Are you sure you want to delete this sender?');">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{% url 'sender-create' %}" class="btn">Create New Sender</a>
+    </div>
 </body>
 </html>

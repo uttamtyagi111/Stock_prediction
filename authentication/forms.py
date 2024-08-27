@@ -47,38 +47,35 @@ class CreateUserForm(UserCreationForm):
             return False
         return True
 
+from django import forms
+from django.contrib.auth import get_user_model
+
 class EmailLoginForm(forms.Form):
-    email = forms.EmailField(
-        max_length=254,
-        required=True,
-        widget=forms.EmailInput(attrs={'placeholder': 'Email...'})
-    )
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'placeholder': 'Password...'})
-    )
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.user = None
+    email = forms.EmailField()
+    password = forms.CharField(widget=forms.PasswordInput)
 
     def clean(self):
         cleaned_data = super().clean()
         email = cleaned_data.get('email')
         password = cleaned_data.get('password')
-        
-        if email and password:
-            try:
-                user = User.objects.get(email=email)
-                self.user = authenticate(username=user.username, password=password)
-                if not self.user:
-                    raise forms.ValidationError("Invalid login credentials")
-            except User.DoesNotExist:
-                raise forms.ValidationError("Invalid login credentials")
-        
+
+        if not email:
+            self.add_error('email', 'Email is required.')
+        if not password:
+            self.add_error('password', 'Password is required.')
+
         return cleaned_data
-    
+
     def get_user(self):
-        return self.user
+        User = get_user_model()
+        try:
+            user = User.objects.get(email=self.cleaned_data['email'])
+            if user.check_password(self.cleaned_data['password']):
+                return user
+        except User.DoesNotExist:
+            return None
+
+
 
 class PasswordResetRequestForm(forms.Form):
     email = forms.EmailField()
