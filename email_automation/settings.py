@@ -65,7 +65,7 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -126,9 +126,10 @@ DATABASES = {
 
 DATABASE_ROUTERS = ['authentication.database_router.DatabaseRouter']
 
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',  # Default
-]
+# settings.py
+AUTHENTICATION_BACKENDS = ['authentication.backends.EmailBackend','django.contrib.auth.backends.ModelBackend' ]
+ # Default
+
 # AUTH_USER_MODEL = 'authentication.AppUser'
 
 

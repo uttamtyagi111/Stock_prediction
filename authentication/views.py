@@ -1,42 +1,38 @@
 from functools import cache
-from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
-from django.shortcuts import render,get_object_or_404, redirect
+from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .forms import CreateUserForm, EmailLoginForm, OTPVerificationForm, PasswordResetRequestForm, SetNewPasswordForm
+from .forms import CreateUserForm, EmailLoginForm, PasswordResetRequestForm, SetNewPasswordForm
+from .forms import OTPVerificationForm
 from django.core.mail import send_mail
 from django.conf import settings
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.utils import timezone
-from django.contrib.auth.decorators import login_required
 import random
-from email_sender.models import Sender, SMTPServer, EmailTemplate
-from email_sender.views import SenderForm,SMTPServerForm,EmailTemplateForm
 from django.shortcuts import render
 from django.core.cache import cache
 from .utils import generate_otp, send_otp_email 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-
-
-from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from .forms import CreateUserForm
 from django.http import JsonResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
 from rest_framework.permissions import AllowAny
+import logging
 from .forms import EmailLoginForm
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 
@@ -48,295 +44,217 @@ class ProtectedView(APIView):
     def get(self, request):
         return Response({"message": "This is a protected view."})
 
+class CustomTokenRefreshView(TokenRefreshView):
+    pass
 
-
-
-import logging
 
 logger = logging.getLogger(__name__)
 
-import json
-from django.views.decorators.csrf import csrf_exempt
-
-@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def loginPage(request):
-    data = json.loads(request.body)
-    form = EmailLoginForm(data)
-
-    logger.debug(f"Request Body: {data}")
-    logger.debug(f"Form Valid: {form.is_valid()}")
-    logger.debug(f"Form Errors: {form.errors}")
-
+    print("Request received:", request.data)  # For debugging purposes
+    
+    form = EmailLoginForm(request.data or None)  # Make sure to use request.data for JSON data
+    
     if form.is_valid():
         email = form.cleaned_data['email']
         password = form.cleaned_data['password']
+        print(f"Email: {email}, Password: {password}")  # Debug
+        
         user = authenticate(request, email=email, password=password)
-
-        if user and user.is_active:
-            refresh = RefreshToken.for_user(user)
-            return JsonResponse({
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-                'redirect': 'home',
-                'message': 'Login successful'
-            })
+        print(f"User: {user}")  # Debug
+        
+        if user:
+            if user.is_active:
+                # Generate JWT tokens
+                refresh = RefreshToken.for_user(user)
+                return JsonResponse({
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'redirect': 'home',
+                    'message': 'Login successful'
+                })
+            else:
+                return JsonResponse({'message': 'Account is inactive.'}, status=400)
         else:
             return JsonResponse({
-                'message': 'Email or password is incorrect or account is inactive.'
+                'message': 'Email or password is incorrect.'
             }, status=400)
-
+    
     return JsonResponse({
         'form_valid': form.is_valid(),
         'errors': form.errors
     }, status=400)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    try:
+        refresh_token = request.data.get('refresh')
 
-from rest_framework_simplejwt.views import TokenRefreshView
-class CustomTokenRefreshView(TokenRefreshView):
-    pass
+        if not refresh_token:
+            return JsonResponse({'message': 'Refresh token is required.'}, status=400)
+        
+        token = RefreshToken(refresh_token)
 
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
+        token.blacklist()
+
+        return JsonResponse({'message': 'Logout successful'}, status=200)
+    except InvalidToken:
+        return JsonResponse({'message': 'Invalid token'}, status=400)
 
 
-
-
-    # if request.user.is_authenticated:
-    #     return JsonResponse({'message': 'Login successful','status':200}, status=200)
-    
-    # if request.method == 'POST':
-    #     form = EmailLoginForm(request.POST)
-    #     if form.is_valid():
-    #         user = form.get_user()
-    #         if user and user.is_active:
-    #             login(request, user)
-    #             return JsonResponse({ 'message': 'Login successful'})
-    #         else:
-    #             return JsonResponse({'errors': {'non_field_errors': ['Email or password is incorrect or account is inactive.']}}, status=400)
-    #     else:
-    #         return JsonResponse({'errors': form.errors}, status=400)
-    
-    # return JsonResponse({'error': 'Invalid request method. Use POST for login.'}, status=405)
-
-@login_required
+#this need authorization barer : token 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def home(request):
-    return render(request, 'home.html', {'current_year': 2024})
+    # Access user information from the request
+    user = request.user
+    data = {
+        'message': 'Welcome to the home page!',
+        'current_year': 2024,
+        'user': {
+            'username': user.username,
+            'email': user.email
+        }
+    }
+    return JsonResponse(data)
 
 # Function to generate a 6-digit OTP
 def generate_otp():
     return str(random.randint(100000, 999999))
 
 
-# def registerPage(request):
-#     if request.user.is_authenticated:
-#         return redirect('home')
 
-#     if request.method == 'POST':
-#         form = CreateUserForm(request.POST)
-#         if form.is_valid():
-#             user = form.save(commit=False)
-#             user.is_active = False  # Set user as inactive until OTP verification
-#             user.save()
-            
-#             otp = generate_otp()
-#             # Store OTP in cache with a 10-minute timeout
-#             cache.set(f'otp_{user.pk}', otp, timeout=600)
-#             send_otp_email(user, otp)
-
-#             messages.success(request, 'Account created. Please enter the OTP sent to your email.')
-#             return redirect('verify_otp', user_id=user.pk)
-#     else:
-#         form = CreateUserForm()
-
-#     return render(request, 'authentication/register.html', {'form': form})
-
-def registerPage(request):
-    if request.user.is_authenticated:
-        return redirect('home')
-
-    if request.method == 'POST':
-        form = CreateUserForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = False  # Set user as inactive until OTP verification
-            user.save()
-            
-            otp = generate_otp()
-            cache.set(f'otp_{user.pk}', otp, timeout=600)
-            send_otp_email(user, otp)
-
-            messages.success(request, 'Account created. Please enter the OTP sent to your email.')
-            return redirect('verify_otp', user_id=user.pk)
-    else:
-        form = CreateUserForm()
-
-    return JsonResponse({'form': form.as_p()})
-
-
-# def verify_otp(request, user_id):
-#     if request.method == 'POST':
-#         otp_input = request.POST.get('otp')
-#         otp = cache.get(f'otp_{user_id}')
-
-#         if otp and otp == otp_input:
-#             user = User.objects.get(pk=user_id)
-#             user.is_active = True
-#             user.save()
-#             messages.success(request, 'Your email has been verified. You can now log in.')
-#             return redirect('login')
-#         else:
-#             messages.error(request, 'Invalid OTP. Please try again.')
-
-#     return render(request, 'authentication/verify_otp.html', {'user_id': user_id})
-
-def verify_otp(request, user_id):
-    if request.method == 'POST':
-        otp_input = request.POST.get('otp')
-        otp = cache.get(f'otp_{user_id}')
-
-        if otp and otp == otp_input:
-            user = User.objects.get(pk=user_id)
-            user.is_active = True
-            user.save()
-            messages.success(request, 'Your email has been verified. You can now log in.')
-            return JsonResponse({'redirect': 'login'})
-        else:
-            messages.error(request, 'Invalid OTP. Please try again.')
-
-    return JsonResponse({'user_id': user_id})
-
-
-
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import InvalidToken
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def logout_view(request):
-    try:
-        # Extract the refresh token from the request data
-        refresh_token = request.data.get('refresh')
+@permission_classes([AllowAny])
+def registerPage(request):
+    if request.user.is_authenticated:
+        return Response({'redirect': 'home'}, status=status.HTTP_302_FOUND)
 
-        if not refresh_token:
-            return JsonResponse({'message': 'Refresh token is required.'}, status=400)
+    form = CreateUserForm(data=request.data)
+
+    if form.is_valid():
+        email = form.cleaned_data.get('email')
+
+
+        if User.objects.filter(email=email).exists():
+            return Response({
+                'message': 'Email is already registered. Please log in or use a different email.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Verify the token
-        token = RefreshToken(refresh_token)
+        # Generate OTP and send email
+        otp = generate_otp()
+        cache.set(f'otp_{email}', otp, timeout=600)  # Store OTP in cache for 10 minutes
+        send_otp_email(email, otp)  # Send OTP to email
 
-        # Blacklist the token to invalidate it
-        token.blacklist()
+        # Temporarily store user data in cache (excluding password for security reasons)
+        user_data = {
+            'username': form.cleaned_data.get('username'),
+            'email': email,
+            'password': form.cleaned_data.get('password'),
+        }
+        cache.set(f'register_data_{email}', user_data, timeout=600)
 
-        return JsonResponse({'message': 'Logout successful'}, status=200)
-    except InvalidToken:
-        return JsonResponse({'message': 'Invalid token'}, status=400)
-# @login_required(login_url='login')
-# def home(request):
-#     return render(request, 'authentication/home.html')
+        return Response({
+            'message': 'OTP sent to your email. Please verify to complete registration.',
+            'email': email,
+        }, status=status.HTTP_200_OK)
+    
+    return Response({
+        'form_valid': form.is_valid(),
+        'errors': form.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
-@login_required(login_url='login')
-def home(request):
-    if request.method == 'GET':
-        return JsonResponse({'message': 'Welcome to the home page!'})
-    return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_otp(request):
+    form = OTPVerificationForm(data=request.data)
+    
+    if form.is_valid():
+        otp_input = form.cleaned_data.get('otp')
+
+        # Retrieve the OTP from cache
+        otp_stored = cache.get(f'otp_{request.data.get("email")}')
+
+        if otp_input == otp_stored:
+            # Retrieve user data from cache
+            user_data = cache.get(f'register_data_{request.data.get("email")}')
+            if user_data:
+                # Create and save the user
+                user = User.objects.create_user(
+                    username=user_data['username'],
+                    email=user_data['email'],
+                    password=user_data['password']
+                )
+                user.is_active = True
+                user.save()
+
+                # Clear cache
+                cache.delete(f'otp_{request.data.get("email")}')
+                cache.delete(f'register_data_{request.data.get("email")}')
+
+                return Response({'message': 'Email verified and account created successfully.'}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'message': 'User data not found. Please register again.'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': 'Invalid OTP. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response({'form_valid': form.is_valid(), 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 def user_list(request):
     users = User.objects.all()
     return render(request, 'authentication/user_list.html', {'users': users})
 
-# def request_password_reset(request):
-#     if request.method == 'POST':
-#         form = PasswordResetRequestForm(request.POST)
-#         if form.is_valid():
-#             email = form.cleaned_data['email']
-#             user = User.objects.filter(email=email).first()
-#             if user:
-#                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-#                 token = default_token_generator.make_token(user)
-#                 reset_link = request.build_absolute_uri(
-#                     reverse('password_reset_confirm', kwargs={'uidb64': uidb64, 'token': token})
-#                 )
-#                 send_mail(
-#                     'Password Reset Request',
-#                     f'Click the link to reset your password: {reset_link}',
-#                     settings.DEFAULT_FROM_EMAIL,
-#                     [email],
-#                     fail_silently=False,
-#                 )
-#                 messages.success(request, 'Password reset email sent.')
-#             else:
-#                 messages.error(request, 'No user found with this email address.')
-#             return redirect('login')
-#     else:
-#         form = PasswordResetRequestForm()
-#     return render(request, 'authentication/request_password_reset.html', {'form': form})
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def request_password_reset(request):
-    if request.method == 'POST':
-        form = PasswordResetRequestForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            user = User.objects.filter(email=email).first()
-            if user:
-                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-                token = default_token_generator.make_token(user)
-                reset_link = request.build_absolute_uri(
-                    reverse('password_reset_confirm', kwargs={'uidb64': uidb64, 'token': token})
-                )
-                send_mail(
-                    'Password Reset Request',
-                    f'Click the link to reset your password: {reset_link}',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
-                )
-                messages.success(request, 'Password reset email sent.')
-                return JsonResponse({'message': 'Password reset email sent.'})
-            else:
-                messages.error(request, 'No user found with this email address.')
-                return JsonResponse({'errors': {'email': ['No user found with this email address.']}}, status=400)
-    else:
-        form = PasswordResetRequestForm()
-    return JsonResponse({'form': form.as_p()})
+    form = PasswordResetRequestForm(data=request.data)
 
-# def reset_password(request, uidb64, token):
-#     try:
-#         uid = force_str(urlsafe_base64_decode(uidb64))
-#         user = User.objects.get(pk=uid)
-#         if not default_token_generator.check_token(user, token):
-#             messages.error(request, 'Invalid reset link.')
-#             return redirect('request_password_reset')
-#     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-#         messages.error(request, 'Invalid reset link.')
-#         return redirect('request_password_reset')
+    if form.is_valid():
+        email = form.cleaned_data['email']
+        user = User.objects.filter(email=email).first()
 
-#     if request.method == 'POST':
-#         form = SetNewPasswordForm(request.POST)
-#         if form.is_valid():
-#             new_password = form.cleaned_data['new_password1']
-#             user.set_password(new_password)
-#             user.save()
-#             messages.success(request, 'Password has been reset successfully.')
-#             return redirect('login')
-#     else:
-#         form = SetNewPasswordForm()
-    
-#     return render(request, 'authentication/reset_password.html', {'form': form})
+        if user:
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_link = f"http://localhost:3000/reset_password/{uidb64}/{token}/"
+            send_mail(
+                'Password Reset Request',
+                f'Click the link to reset your password: {reset_link}',
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+            return Response({'message': 'Password reset email sent.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'errors': {'email': ['No user found with this email address.']}}, status=status.HTTP_400_BAD_REQUEST)
 
+    return Response({'form_valid': form.is_valid(), 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST', 'GET'])
+@permission_classes([AllowAny])
 def reset_password(request, uidb64, token):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
         if not default_token_generator.check_token(user, token):
-            messages.error(request, 'Invalid reset link.')
-            return JsonResponse({'redirect': 'request_password_reset'})
+            messages.error(request, 'Invalid or expired reset link.')
+            return Response({'redirect': 'request_password_reset'}, status=status.HTTP_400_BAD_REQUEST)
     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        messages.error(request, 'Invalid reset link.')
-        return JsonResponse({'redirect': 'request_password_reset'})
+        messages.error(request, 'Invalid or expired reset link.')
+        return Response({'redirect': 'request_password_reset'}, status=status.HTTP_400_BAD_REQUEST)
 
     if request.method == 'POST':
         form = SetNewPasswordForm(request.POST)
@@ -345,54 +263,11 @@ def reset_password(request, uidb64, token):
             user.set_password(new_password)
             user.save()
             messages.success(request, 'Password has been reset successfully.')
-            return JsonResponse({'redirect': 'login'})
+            return Response({'redirect': 'login'}, status=status.HTTP_200_OK)
     else:
         form = SetNewPasswordForm()
-    
-    return JsonResponse({'form': form.as_p()})
+
+    return Response({'form': form.as_p()}, status=status.HTTP_200_OK)
 
 
 
-
-# def otp_verification(request):
-#     if request.method == 'POST':
-#         form = OTPVerificationForm(request.POST)
-#         if form.is_valid():
-#             otp = form.cleaned_data['otp']
-#             try:
-#                 user = User.objects.get(profile__otp=otp, profile__otp_expiry__gte=timezone.now())
-#                 user.is_active = True
-#                 user.profile.otp = ''  # Clear OTP after successful verification
-#                 user.profile.save()
-#                 user.save()
-#                 login(request, user)
-#                 messages.success(request, 'Your email has been verified. You are now logged in.')
-#                 return redirect('home')
-#             except User.DoesNotExist:
-#                 messages.error(request, 'Invalid or expired OTP.')
-#         return render(request, 'authentication/otp_verification.html', {'form': form})
-    
-#     else:
-#         form = OTPVerificationForm()
-#         return render(request, 'authentication/otp_verification.html', {'form': form})
-
-def otp_verification(request):
-    if request.method == 'POST':
-        form = OTPVerificationForm(request.POST)
-        if form.is_valid():
-            otp = form.cleaned_data['otp']
-            try:
-                user = User.objects.get(profile__otp=otp, profile__otp_expiry__gte=timezone.now())
-                user.is_active = True
-                user.profile.otp = ''  # Clear OTP after successful verification
-                user.profile.save()
-                user.save()
-                login(request, user)
-                messages.success(request, 'Your email has been verified. You are now logged in.')
-                return JsonResponse({'redirect': 'home'})
-            except User.DoesNotExist:
-                messages.error(request, 'Invalid or expired OTP.')
-                return JsonResponse({'errors': {'otp': ['Invalid or expired OTP.']}}, status=400)
-    else:
-        form = OTPVerificationForm()
-    return JsonResponse({'form': form.as_p()})

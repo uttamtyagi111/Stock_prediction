@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.template import Template, Context
-# from django.template import Template, Context
 from django.template.exceptions import TemplateDoesNotExist
 from rest_framework.permissions import IsAuthenticated
 import csv,time,logging,shutil,os
@@ -17,7 +16,13 @@ from .models import EmailTemplate, Sender, SMTPServer, UserEditedTemplate
 from rest_framework import viewsets
 from django.shortcuts import render, get_object_or_404, redirect
 from .forms import SenderForm, SMTPServerForm, EmailTemplateForm, UserEditedTemplateForm
-from django.template.loader import get_template
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Sender
+from .serializers import SenderSerializer, SenderCreateSerializer
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView
 from django.contrib.auth.forms import UserCreationForm
@@ -25,11 +30,6 @@ from django.db import connection
 from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
-
-class RegisterView(CreateView):
-    form_class = UserCreationForm
-    template_name = 'registration/register.html'
-    success_url = '/login/'
 
 
 # @login_required
@@ -101,47 +101,39 @@ class RegisterView(CreateView):
 #     return render(request, 'confirm_delete.html', {'sender': sender})
 
 
-@login_required
-def home(request):
-    senders = Sender.objects.filter(user=request.user)
-    smtp_servers = SMTPServer.objects.filter(user=request.user)
-    templates = EmailTemplate.objects.filter(user=request.user)
-    
-    return JsonResponse({
-        'senders': list(senders.values()),
-        'smtp_servers': list(smtp_servers.values()),
-        'templates': list(templates.values())
-    })
 
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def senders_list(request):
     senders = Sender.objects.filter(user=request.user)
-    return JsonResponse({'senders': list(senders.values())})
+    serializer = SenderSerializer(senders, many=True)
+    return Response({'senders': serializer.data})
 
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def sender_detail(request, pk):
     sender = get_object_or_404(Sender, pk=pk, user=request.user)
-    return JsonResponse({'sender': sender_to_dict(sender)})
+    serializer = SenderSerializer(sender)
+    return Response({'sender': serializer.data})
 
-@login_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def sender_form(request, pk=None):
     if pk:
         sender = get_object_or_404(Sender, pk=pk, user=request.user)
-        form = SenderForm(request.POST or None, instance=sender)
+        form = SenderCreateSerializer(sender, data=request.data, partial=True)
     else:
-        sender = Sender(user=request.user)
-        form = SenderForm(request.POST or None, instance=sender)
+        form = SenderCreateSerializer(data=request.data)
     
-    if request.method == 'POST':
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'redirect': 'senders-list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
+    if form.is_valid():
+        form.save(user=request.user)
+        return Response({'success': True, 'redirect': 'senders-list'}, status=status.HTTP_200_OK)
+    else:
+        return Response({'success': False, 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    return JsonResponse({'form_title': 'Edit Sender' if pk else 'Create New Sender'})
 
-@login_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def sender_create(request):
     if request.method == 'POST':
         form = SenderForm(request.POST)
@@ -156,15 +148,15 @@ def sender_create(request):
     form = SenderForm()
     return JsonResponse({ 'form_title': 'Create Sender'})
 
-@login_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def sender_delete(request, pk):
     sender = get_object_or_404(Sender, pk=pk, user=request.user)
-    
     if request.method == 'POST':
         sender.delete()
-        return JsonResponse({'success': True, 'redirect': 'senders-list'})
+        return Response({'success': True, 'redirect': 'senders-list'}, status=status.HTTP_204_NO_CONTENT)
     
-    return JsonResponse({'sender': sender_to_dict(sender)})
+    return Response({'sender': sender_to_dict(sender)})
 
 # Helper method for converting Sender to a dict for JSON response
 def sender_to_dict(sender):
@@ -174,7 +166,6 @@ def sender_to_dict(sender):
         'email': sender.email,
         # Add other fields as needed
     }
-
 
 
 # @login_required

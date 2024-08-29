@@ -16,7 +16,7 @@ class SMTPServerForm(forms.ModelForm):
 class EmailTemplateForm(forms.ModelForm):
     class Meta:
         model = EmailTemplate
-        fields = ['name', 'template_path'] 
+        fields = ['name'] 
 
 
 class UserEditedTemplateForm(forms.ModelForm):

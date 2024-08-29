@@ -9,8 +9,6 @@ class EmailTemplate(models.Model):
     def __str__(self):
         return self.name
 
-from django.conf import settings
-from django.db import models
 
 class UserEditedTemplate(models.Model):
     original_template = models.ForeignKey(EmailTemplate, on_delete=models.CASCADE, null=True, blank=True)

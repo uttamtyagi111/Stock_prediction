@@ -17,7 +17,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('verify-otp/<int:user_id>/',views.verify_otp, name='verify_otp'),
+    path('verify-otp/',views.verify_otp, name='verify_otp'),
     path('reset_password/', views.request_password_reset, name='password_reset'),
     # path('csrf/', get_csrf_token, name='csrf_token'),
     # path('reset_password/done/', PasswordResetDoneView.as_view(

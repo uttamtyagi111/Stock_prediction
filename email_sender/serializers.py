@@ -1,10 +1,25 @@
 from rest_framework import serializers
 from .models import Sender, SMTPServer, EmailTemplate
 
+
 class SenderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sender
-        fields = ['id', 'name', 'email']
+        fields = ['id', 'name', 'email']  # Add other fields as needed
+
+class SenderCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sender
+        fields = ['name', 'email']  # Include other fields as necessary
+
+    def save(self, user=None):
+        sender = Sender(
+            name=self.validated_data['name'],
+            email=self.validated_data['email'],
+            user=user  # Associate the sender with the authenticated user
+        )
+        sender.save()
+        return sender
 
 class SMTPServerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,7 +29,7 @@ class SMTPServerSerializer(serializers.ModelSerializer):
 class EmailTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailTemplate
-        fields = ['id', 'name', 'template_path'] 
+        fields = ['id', 'name'] 
         
 
 class EmailSendSerializer(serializers.Serializer):
