@@ -1,10 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SenderViewSet, EmailTemplateViewSet, SendEmailsView, senders_list, sender_create,sender_detail, sender_form,smtp_server_create,sender_delete
-from .views import smtp_servers_list, smtp_server_detail, smtp_server_form ,smtp_server_edit
+from .views import SenderViewSet, EmailTemplateViewSet, SendEmailsView, senders_list,sender_detail,smtp_server_create,sender_delete
+from .views import smtp_servers_list, smtp_server_detail,smtp_server_edit,sender_edit
 from .views import email_template_delete,email_template_form,email_template_list,email_template_create
 from .views import default_templates_view, edit_template_view, user_templates_view,edit_user_template
 from django.contrib.auth import views as auth_views
+from . import views
 
 router = DefaultRouter()
 router.register(r'senders', SenderViewSet)
@@ -12,19 +13,17 @@ router.register(r'email-templates', EmailTemplateViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('send-emails/', SendEmailsView.as_view(), name='send-emails'),
     path('senders/', senders_list, name='senders-list'),
     path('senders/<int:pk>/', sender_detail, name='sender_detail'),
-    path('senders/form/', sender_form, name='sender_form'),
-    path('senders/create/', sender_create, name='sender-create'),
-    # path('senders/new/', sender_form, name='sender_form'),
-    path('senders/edit/<int:pk>/', sender_form, name='sender_form'),
-    path('senders/<int:pk>/delete/', sender_delete, name='sender-delete'),
-    path('smtp-servers/', smtp_servers_list, name='smtp_servers-list'),
-    path('smtp-servers/<int:pk>/', smtp_server_detail, name='smtp-server-detail'),
-    path('smtp-servers/new/', smtp_server_form, name='smtp_server_form'),
-    path('smtp-servers/create/', smtp_server_create, name='smtp-server-create'),
-    path('smtp-servers/edit/<int:pk>/', smtp_server_edit, name='smtp-server-edit'),
-    path('send-emails/', SendEmailsView.as_view(), name='send-emails'),
+    path('sender/create/', views.create_sender, name='create-sender'),
+    path('senders/edit/<int:pk>/', sender_edit, name='sender-edit'),
+    path('senders/delete/<int:pk>/', sender_delete, name='sender-delete'),
+    path('smtp-servers/', views.smtp_servers_list, name='smtp-servers-list'),
+    path('smtp-servers/<int:pk>/', views.smtp_server_detail, name='smtp-server-detail'),
+    path('smtp-server/create/', views.smtp_server_create, name='smtp-server-create'),
+    path('smtp-servers/edit/<int:pk>/', views.smtp_server_edit, name='smtp-server-edit'),
+    path('smtp-servers/delete/<int:pk>/', views.smtp_server_delete, name='smtp-server-delete'),
     # path('email-template/', email_template_form, name='email-template-form'),
     path('email-template/', email_template_list, name='email_template_list'),
     path('default-templates/', default_templates_view, name='default_templates'),

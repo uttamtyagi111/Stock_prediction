@@ -7,19 +7,7 @@ class SenderSerializer(serializers.ModelSerializer):
         model = Sender
         fields = ['id', 'name', 'email']  # Add other fields as needed
 
-class SenderCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Sender
-        fields = ['name', 'email']  # Include other fields as necessary
 
-    def save(self, user=None):
-        sender = Sender(
-            name=self.validated_data['name'],
-            email=self.validated_data['email'],
-            user=user  # Associate the sender with the authenticated user
-        )
-        sender.save()
-        return sender
 
 class SMTPServerSerializer(serializers.ModelSerializer):
     class Meta:

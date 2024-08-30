@@ -11,7 +11,7 @@ import csv,time,logging,shutil,os
 from django.conf import settings
 from io import StringIO
 from django.conf import settings
-from .serializers import EmailSendSerializer, EmailTemplateSerializer, SenderSerializer
+from .serializers import EmailSendSerializer, EmailTemplateSerializer, SenderSerializer,SMTPServerSerializer
 from .models import EmailTemplate, Sender, SMTPServer, UserEditedTemplate
 from rest_framework import viewsets
 from django.shortcuts import render, get_object_or_404, redirect
@@ -21,7 +21,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Sender
-from .serializers import SenderSerializer, SenderCreateSerializer
+from .serializers import SenderSerializer
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView
@@ -30,77 +30,6 @@ from django.db import connection
 from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
-
-
-# @login_required
-# def home(request):
-#     senders = Sender.objects.filter(user=request.user)
-#     smtp_servers = SMTPServer.objects.filter(user=request.user)
-#     templates = EmailTemplate.objects.filter(user=request.user)
-    
-#     return render(request, 'home.html', {
-#         'senders': senders,
-#         'smtp_servers': smtp_servers,
-#         'templates': templates,
-#     })
-
-
-# @login_required
-# def senders_list(request):
-#     senders = Sender.objects.filter(user=request.user)
-#     return render(request, 'senders_list.html', {'senders': senders})
-
-
-# @login_required
-# def sender_detail(request, pk):
-#     sender = get_object_or_404(Sender, pk=pk, user=request.user)
-#     return render(request, 'sender_detail.html', {'sender': sender})
-
-# @login_required
-# def sender_form(request, pk=None):
-#     if pk:
-#         sender = get_object_or_404(Sender, pk=pk, user=request.user)
-#         form = SenderForm(instance=sender)
-#         form_title = 'Edit Sender'
-#     else:
-#         sender = Sender(user=request.user)  # Initialize with the current user
-#         form = SenderForm(instance=sender)
-#         form_title = 'Create New Sender'
-
-#     if request.method == 'POST':
-#         form = SenderForm(request.POST, instance=sender if pk else None)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('senders-list')
-
-#     return render(request, 'sender_form.html', {'form': form, 'form_title': form_title})
-
-
-
-
-# @login_required
-# def sender_create(request):
-#     if request.method == 'POST':
-#         form = SenderForm(request.POST)
-#         if form.is_valid():
-#             sender = form.save(commit=False)
-#             sender.user = request.user  # Assign the current logged-in user
-#             sender.save()
-#             return redirect('senders-list')  # Redirect to the sender list page
-#     else:
-#         form = SenderForm()
-    
-#     return render(request, 'sender_form.html', {'form': form, 'form_title': 'Create Sender'})
-
-# @login_required
-# def sender_delete(request, pk):
-#     sender = get_object_or_404(Sender, pk=pk, user=request.user)  # Ensure the sender belongs to the logged-in user
-#     if request.method == 'POST':
-#         sender.delete()
-#         return redirect('senders-list')  # Redirect to the sender list page after deletion
-#     return render(request, 'confirm_delete.html', {'sender': sender})
-
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -118,43 +47,35 @@ def sender_detail(request, pk):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def sender_form(request, pk=None):
-    if pk:
-        sender = get_object_or_404(Sender, pk=pk, user=request.user)
-        form = SenderCreateSerializer(sender, data=request.data, partial=True)
-    else:
-        form = SenderCreateSerializer(data=request.data)
+def create_sender(request):
+    serializer = SenderSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response({'message': 'Sender created successfully.','sender': serializer.data}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def sender_edit(request, pk):
+    sender = get_object_or_404(Sender, pk=pk, user=request.user)
+    form = SenderForm(request.data, instance=sender)
     
     if form.is_valid():
-        form.save(user=request.user)
-        return Response({'success': True, 'redirect': 'senders-list'}, status=status.HTTP_200_OK)
+        sender = form.save(commit=False)
+        sender.user = request.user
+        sender.save()
+        return JsonResponse({'message': 'Sender updated successfully.','success': True, 'redirect': 'senders-list'}, status=200)
     else:
-        return Response({'success': False, 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def sender_create(request):
-    if request.method == 'POST':
-        form = SenderForm(request.POST)
-        if form.is_valid():
-            sender = form.save(commit=False)
-            sender.user = request.user
-            sender.save()
-            return JsonResponse({'success': True, 'redirect': 'senders-list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-    
-    form = SenderForm()
-    return JsonResponse({ 'form_title': 'Create Sender'})
-
-@api_view(['POST'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def sender_delete(request, pk):
     sender = get_object_or_404(Sender, pk=pk, user=request.user)
     if request.method == 'POST':
         sender.delete()
-        return Response({'success': True, 'redirect': 'senders-list'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Sender deleted successfully.','success': True, 'redirect': 'senders-list'}, status=status.HTTP_204_NO_CONTENT)
     
     return Response({'sender': sender_to_dict(sender)})
 
@@ -168,153 +89,9 @@ def sender_to_dict(sender):
     }
 
 
-# @login_required
-# def smtp_servers_list(request):
-#     servers = SMTPServer.objects.filter(user=request.user)
-#     return render(request, 'smtp_servers_list.html', {'servers': servers})
-
-
-# @login_required
-# def smtp_server_detail(request, pk):
-#     server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-#     return render(request, 'smtp_server_detail.html', {'server': server})
-
-
-# @login_required
-# def smtp_server_form(request, pk=None):
-#     if pk:
-#         smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-#         form_title = 'Edit SMTP Server'
-#     else:
-#         smtp_server = SMTPServer(user=request.user)
-#         form_title = 'Create New SMTP Server'
-    
-#     if request.method == 'POST':
-#         form = SMTPServerForm(request.POST, instance=smtp_server)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('smtp-servers-list')
-#     else:
-#         form = SMTPServerForm(instance=smtp_server)
-
-#     return render(request, 'smtp_server_form.html', {'form': form, 'form_title': form_title})
-
-
-# @login_required
-# def smtp_server_edit(request, pk):
-#     smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-
-#     if request.method == "POST":
-#         form = SMTPServerForm(request.POST, instance=smtp_server)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('smtp-servers-list')
-#     else:
-#         form = SMTPServerForm(instance=smtp_server)
-
-#     return render(request, 'smtp_server_edit.html', {'form': form, 'smtp_server': smtp_server})
-
-# @login_required
-# def smtp_server_create(request):
-#     if request.method == 'POST':
-#         form = SMTPServerForm(request.POST)
-#         if form.is_valid():
-#             smtp_server = form.save(commit=False)
-#             smtp_server.user = request.user  # Associate the new server with the current user
-#             smtp_server.save()
-#             return redirect('smtp-servers-list')  # Redirect to the list of SMTP servers after successful creation
-#     else:
-#         form = SMTPServerForm()
-
-#     return render(request, 'smtp_server_form.html', {'form': form, 'form_title': 'Create New SMTP Server'})
-
-
-# @login_required
-# def smtp_server_detail(request, pk):
-#     smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-#     return render(request, 'smtp_server_detail.html', {'smtp_server': smtp_server})
-
-
-# from django.http import JsonResponse
-# from django.shortcuts import get_object_or_404
-# from django.contrib.auth.decorators import login_required
-# from .forms import SMTPServerForm
-# from email_sender.models import SMTPServer
-
-# @login_required
-# def smtp_servers_list(request):
-#     servers = SMTPServer.objects.filter(user=request.user)
-#     return JsonResponse({'servers': list(servers.values())})
-
-# @login_required
-# def smtp_server_detail(request, pk):
-#     server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-#     return JsonResponse({'server': server_to_dict(server)})
-
-# @login_required
-# def smtp_server_form(request, pk=None):
-#     if pk:
-#         smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-#         form = SMTPServerForm(request.POST or None, instance=smtp_server)
-#         form_title = 'Edit SMTP Server'
-#     else:
-#         smtp_server = SMTPServer(user=request.user)
-#         form = SMTPServerForm(request.POST or None, instance=smtp_server)
-#         form_title = 'Create New SMTP Server'
-    
-#     if request.method == 'POST':
-#         if form.is_valid():
-#             form.save()
-#             return JsonResponse({'success': True, 'redirect': 'smtp-servers-list'})
-#         else:
-#             return JsonResponse({'success': False, 'errors': form.errors})
-
-#     return JsonResponse({'form': form.as_p(), 'form_title': form_title})
-
-# @login_required
-# def smtp_server_create(request):
-#     if request.method == 'POST':
-#         form = SMTPServerForm(request.POST)
-#         if form.is_valid():
-#             smtp_server = form.save(commit=False)
-#             smtp_server.user = request.user
-#             smtp_server.save()
-#             return JsonResponse({'success': True, 'redirect': 'smtp-servers-list'})
-#         else:
-#             return JsonResponse({'success': False, 'errors': form.errors})
-    
-#     form = SMTPServerForm()
-#     return JsonResponse({'form': form.as_p(), 'form_title': 'Create New SMTP Server'})
-
-# @login_required
-# def smtp_server_edit(request, pk):
-#     smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-
-#     if request.method == 'POST':
-#         form = SMTPServerForm(request.POST, instance=smtp_server)
-#         if form.is_valid():
-#             form.save()
-#             return JsonResponse({'success': True, 'redirect': 'smtp-servers-list'})
-#         else:
-#             return JsonResponse({'success': False, 'errors': form.errors})
-    
-#     form = SMTPServerForm(instance=smtp_server)
-#     return JsonResponse({'form': form.as_p(), 'smtp_server': smtp_server_to_dict(smtp_server)})
-
-# # Helper method for converting SMTPServer to a dict for JSON response
-# def smtp_server_to_dict(smtp_server):
-#     return {
-#         'id': smtp_server.id,
-#         'name': smtp_server.name,
-#         'host': smtp_server.host,
-#         'port': smtp_server.port,
-#         'username': smtp_server.username,
-#         'email': smtp_server.email,
-        
 #     }
 
 ####### SMTP SERVERS 
-
 # Helper method for converting SMTPServer to a dict for JSON response
 def smtp_server_to_dict(smtp_server):
     return {
@@ -326,78 +103,52 @@ def smtp_server_to_dict(smtp_server):
         'email': smtp_server.email,
         'use_tls': smtp_server.use_tls,
         'use_ssl': smtp_server.use_ssl,
-        # 'created_at': smtp_server.created_at.isoformat(),  # Include other fields as necessary
+        # Add other fields as necessary
     }
 
-# @login_required
-# def smtp_servers_list(request):
-#     servers = SMTPServer.objects.filter(user=request.user)
-#     return JsonResponse({'servers': [smtp_server_to_dict(server) for server in servers]})
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def smtp_servers_list(request):
-    if request.method == 'GET':
-        servers = SMTPServer.objects.filter(user=request.user)
-        servers_list = [smtp_server_to_dict(server) for server in servers]
-        return JsonResponse({'servers': servers_list, 'form_valid': True}, status=200)
-    
-    return JsonResponse({'error': 'Invalid request method.'}, status=405)
+    servers = SMTPServer.objects.filter(user=request.user)
+    serializer = SMTPServerSerializer(servers, many=True)
+    return Response({'servers': serializer.data}, status=status.HTTP_200_OK)
 
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def smtp_server_detail(request, pk):
     server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-    return JsonResponse({'server': smtp_server_to_dict(server)})
+    serializer = SMTPServerSerializer(server)
+    return Response({'server': serializer.data}, status=status.HTTP_200_OK)
 
-@login_required
-def smtp_server_form(request, pk=None):
-    if pk:
-        smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-        form = SMTPServerForm(request.POST or None, instance=smtp_server)
-        form_title = 'Edit SMTP Server'
-    else:
-        smtp_server = SMTPServer(user=request.user)
-        form = SMTPServerForm(request.POST or None, instance=smtp_server)
-        form_title = 'Create New SMTP Server'
-    
-    if request.method == 'POST':
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'redirect': 'smtp-servers-list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-
-    return JsonResponse({'form': form.as_p(), 'form_title': form_title})
-
-@login_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def smtp_server_create(request):
-    if request.method == 'POST':
-        form = SMTPServerForm(request.POST)
-        if form.is_valid():
-            smtp_server = form.save(commit=False)
-            smtp_server.user = request.user
-            smtp_server.save()
-            return JsonResponse({'success': True, 'redirect': 'smtp-servers-list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-    
-    form = SMTPServerForm()
-    return JsonResponse({'form': form.as_p(), 'form_title': 'Create New SMTP Server'})
+    serializer = SMTPServerSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response({'message': 'SMTP server created successfully.', 'server': serializer.data}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@login_required
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def smtp_server_edit(request, pk):
     smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
-
-    if request.method == 'POST':
-        form = SMTPServerForm(request.POST, instance=smtp_server)
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'redirect': 'smtp-servers-list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
+    form = SMTPServerForm(request.data, instance=smtp_server)
     
-    form = SMTPServerForm(instance=smtp_server)
-    return JsonResponse({'form': form.as_p(), 'smtp_server': smtp_server_to_dict(smtp_server)})
+    if form.is_valid():
+        smtp_server = form.save(commit=False)
+        smtp_server.user = request.user
+        smtp_server.save()
+        return JsonResponse({'message': 'SMTP server updated successfully.', 'success': True, 'redirect': 'smtp-servers-list'}, status=200)
+    else:
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
-
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def smtp_server_delete(request, pk):
+    smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
+    smtp_server.delete()
+    return Response({'message': 'SMTP server deleted successfully.', 'success': True, 'redirect': 'smtp-servers-list'}, status=status.HTTP_204_NO_CONTENT)
 
 
 
