@@ -1,4 +1,3 @@
-from django.contrib.auth.decorators import login_required
 from datetime import datetime
 from django.core.mail import EmailMessage, get_connection
 from rest_framework.views import APIView
@@ -7,26 +6,21 @@ from rest_framework import status
 from django.template import Template, Context
 from django.template.exceptions import TemplateDoesNotExist
 from rest_framework.permissions import IsAuthenticated
-import csv,time,logging,shutil,os
+import csv,time,logging,os
 from django.conf import settings
 from io import StringIO
 from django.conf import settings
 from .serializers import EmailSendSerializer, EmailTemplateSerializer, SenderSerializer,SMTPServerSerializer
 from .models import EmailTemplate, Sender, SMTPServer, UserEditedTemplate
 from rest_framework import viewsets
-from django.shortcuts import render, get_object_or_404, redirect
-from .forms import SenderForm, SMTPServerForm, EmailTemplateForm, UserEditedTemplateForm
+from django.shortcuts import render, get_object_or_404
+from .forms import SenderForm, SMTPServerForm, UserEditedTemplateForm
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Sender
 from .serializers import SenderSerializer
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import CreateView
-from django.contrib.auth.forms import UserCreationForm
-from django.db import connection
 from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
@@ -79,20 +73,15 @@ def sender_delete(request, pk):
     
     return Response({'sender': sender_to_dict(sender)})
 
-# Helper method for converting Sender to a dict for JSON response
 def sender_to_dict(sender):
     return {
         'id': sender.id,
         'name': sender.name,
         'email': sender.email,
-        # Add other fields as needed
     }
 
 
-#     }
 
-####### SMTP SERVERS 
-# Helper method for converting SMTPServer to a dict for JSON response
 def smtp_server_to_dict(smtp_server):
     return {
         'id': smtp_server.id,
@@ -103,7 +92,6 @@ def smtp_server_to_dict(smtp_server):
         'email': smtp_server.email,
         'use_tls': smtp_server.use_tls,
         'use_ssl': smtp_server.use_ssl,
-        # Add other fields as necessary
     }
 
 @api_view(['GET'])
@@ -184,11 +172,9 @@ def email_template_list(request):
 class ViewTemplateById(APIView):
 
     def get(self, request, template_id):
-        # Fetch the template by ID
         template = get_object_or_404(EmailTemplate, id=template_id)
         
         try:
-            # Open and read the template file
             with open(template.template_path, 'r', encoding='utf-8') as file:
                 content = file.read().replace('\n', '')
         except FileNotFoundError:
@@ -196,7 +182,6 @@ class ViewTemplateById(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Return the HTML content in the response
         return Response({"id": template.id, "name": template.name, "html_content": content}, status=status.HTTP_200_OK)
 
 
@@ -204,11 +189,9 @@ class ViewTemplateById(APIView):
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
 def edit_email_template(request, template_id):
-    # Get the original template
     original_template = get_object_or_404(EmailTemplate, id=template_id)
     template_path = original_template.template_path
     
-    # Read initial content from the file
     try:
         if os.path.exists(template_path):
             with open(template_path, 'r', encoding='utf-8') as file:
@@ -296,7 +279,6 @@ def get_user_template_by_id(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def edit_user_template(request, pk):
-    # Ensure the user is authenticated
     if not request.user.is_authenticated:
         return JsonResponse({'success': False, 'error': 'User must be authenticated.'}, status=401)
     
@@ -369,7 +351,7 @@ def delete_user_template(request, pk):  #this is for user edited template
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
     
-# Helper method for converting UserEditedTemplate to a dict for JSON response
+
 
 
 
@@ -383,7 +365,6 @@ class SenderViewSet(viewsets.ModelViewSet):
     
 
 class SendEmailsView(APIView):
-    # LoginRequiredMixin
     # permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access this view
 
     def get(self, request, *args, **kwargs):

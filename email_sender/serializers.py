@@ -5,7 +5,7 @@ from .models import Sender, SMTPServer, EmailTemplate
 class SenderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sender
-        fields = ['id', 'name', 'email']  # Add other fields as needed
+        fields = ['id', 'name', 'email'] 
 
 
 
