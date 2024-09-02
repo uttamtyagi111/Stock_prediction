@@ -3,16 +3,14 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.urls import reverse
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render
+from django.contrib.auth import authenticate
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from .forms import CreateUserForm, EmailLoginForm, PasswordResetRequestForm, SetNewPasswordForm
 from .forms import OTPVerificationForm
 from django.core.mail import send_mail
 from django.conf import settings
-import random
+import random,logging
 from django.shortcuts import render
 from django.core.cache import cache
 from .utils import generate_otp, send_otp_email 
@@ -25,7 +23,6 @@ from django.http import JsonResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
 from rest_framework.permissions import AllowAny
-import logging
 from .forms import EmailLoginForm
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -53,21 +50,20 @@ logger = logging.getLogger(__name__)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def loginPage(request):
-    print("Request received:", request.data)  # For debugging purposes
+    print("Request received:", request.data) 
     
-    form = EmailLoginForm(request.data or None)  # Make sure to use request.data for JSON data
+    form = EmailLoginForm(request.data or None)
     
     if form.is_valid():
         email = form.cleaned_data['email']
         password = form.cleaned_data['password']
-        print(f"Email: {email}, Password: {password}")  # Debug
+        print(f"Email: {email}, Password: {password}")  
         
         user = authenticate(request, email=email, password=password)
-        print(f"User: {user}")  # Debug
+        print(f"User: {user}") 
         
         if user:
             if user.is_active:
-                # Generate JWT tokens
                 refresh = RefreshToken.for_user(user)
                 return JsonResponse({
                     'access': str(refresh.access_token),
@@ -106,11 +102,9 @@ def logout_view(request):
         return JsonResponse({'message': 'Invalid token'}, status=400)
 
 
-#this need authorization barer : token 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def home(request):
-    # Access user information from the request
     user = request.user
     data = {
         'message': 'Welcome to the home page!',
@@ -122,7 +116,7 @@ def home(request):
     }
     return JsonResponse(data)
 
-# Function to generate a 6-digit OTP
+
 def generate_otp():
     return str(random.randint(100000, 999999))
 
@@ -146,12 +140,11 @@ def registerPage(request):
                 'message': 'Email is already registered. Please log in or use a different email.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Generate OTP and send email
+        
         otp = generate_otp()
-        cache.set(f'otp_{email}', otp, timeout=600)  # Store OTP in cache for 10 minutes
-        send_otp_email(email, otp)  # Send OTP to email
+        cache.set(f'otp_{email}', otp, timeout=600) 
+        send_otp_email(email, otp) 
 
-        # Temporarily store user data in cache (excluding password for security reasons)
         user_data = {
             'username': form.cleaned_data.get('username'),
             'email': email,
@@ -182,14 +175,11 @@ def verify_otp(request):
     if form.is_valid():
         otp_input = form.cleaned_data.get('otp')
 
-        # Retrieve the OTP from cache
         otp_stored = cache.get(f'otp_{request.data.get("email")}')
 
         if otp_input == otp_stored:
-            # Retrieve user data from cache
             user_data = cache.get(f'register_data_{request.data.get("email")}')
             if user_data:
-                # Create and save the user
                 user = User.objects.create_user(
                     username=user_data['username'],
                     email=user_data['email'],
@@ -198,7 +188,6 @@ def verify_otp(request):
                 user.is_active = True
                 user.save()
 
-                # Clear cache
                 cache.delete(f'otp_{request.data.get("email")}')
                 cache.delete(f'register_data_{request.data.get("email")}')
 

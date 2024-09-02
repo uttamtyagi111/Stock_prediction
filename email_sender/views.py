@@ -151,220 +151,18 @@ def smtp_server_delete(request, pk):
     return Response({'message': 'SMTP server deleted successfully.', 'success': True, 'redirect': 'smtp-servers-list'}, status=status.HTTP_204_NO_CONTENT)
 
 
-
-# @login_required
-# def email_template_form(request, pk=None):
-#     if pk:
-#         template = get_object_or_404(EmailTemplate, pk=pk)
-#         form_title = 'Edit Email Template'
-#     else:
-#         template = EmailTemplate()
-#         form_title = 'Create New Email Template'
+def replace_special_characters(content):
+    replacements = {
+        '\u2019': "'",
+        '\u2018': "'",
+        '\u201C': '"',
+        '\u201D': '"',
+    }
+    if content:
+        for unicode_char, replacement in replacements.items():
+            content = content.replace(unicode_char, replacement)
+    return content
     
-#     form = EmailTemplateForm(instance=template)
-    
-#     if request.method == 'POST':
-#         form = EmailTemplateForm(request.POST, instance=template)
-#         if form.is_valid():
-#             form.save()  # Save the path of the original template
-#             return redirect('email_template_list')
-    
-#     return render(request, 'email_template_form.html', {'form': form, 'form_title': form_title})
-
-# @login_required
-# def edit_template(request, pk): #edit email template by different users 
-#     original_template = get_object_or_404(EmailTemplate, pk=pk)
-#     if request.method == 'POST':
-#         form = UserEditedTemplateForm(request.POST)
-#         if form.is_valid():
-#             user_edited_template = form.save(commit=False)
-#             user_edited_template.original_template = original_template
-#             user_edited_template.user = request.user
-#             template_path = os.path.join(settings.EDITED_TEMPLATES_DIR, os.path.basename(user_edited_template.template_path))
-#             shutil.copy(user_edited_template.template_path, template_path)
-#             user_edited_template.template_path = template_path
-#             user_edited_template.save()
-#             return redirect('email_template_list')
-#     else:
-#         form = UserEditedTemplateForm()
-#     return render(request, 'edit_template.html', {'form': form, 'form_title': 'Edit Template'})
-
-# @login_required
-# def email_template_list(request):
-#     templates = EmailTemplate.objects.all()
-#     return render(request, 'email_templates_list.html', {'templates': templates})
-
-# @login_required
-# def default_templates_view(request):
-#     templates = EmailTemplate.objects.all()
-#     return render(request, 'default_templates.html', {'templates': templates})
-
-
-# @login_required
-# def edit_template_view(request, template_id):
-#     # Fetch the original template by ID
-#     original_template = get_object_or_404(EmailTemplate, id=template_id)
-    
-#     # Try to load the content from the original template
-#     template_path = original_template.template_path
-#     print("Loading content from:", template_path)  # Debug statement
-    
-#     try:
-#         if os.path.exists(template_path):
-#             with open(template_path, 'r', encoding='utf-8') as file:
-#                 initial_content = file.read()  # Load the HTML content from the original template
-#         else:
-#             print("File not found:", template_path)  # Debug statement
-#             initial_content = ''
-#     except FileNotFoundError:
-#         print("FileNotFoundError:", template_path)  # Debug statement
-#         initial_content = ''
-#     except Exception as e:
-#         print("Error reading file:", e)  # Debug statement
-#         initial_content = ''
-    
-#     if request.method == 'POST':
-#         form = UserEditedTemplateForm(request.POST)
-#         if form.is_valid():
-#             edited_template = form.save(commit=False)
-#             edited_template.original_template = original_template
-#             edited_template.user = request.user
-            
-#             # Generate a unique name for the edited template
-#             base_name = f"{original_template.name} - Edited"
-#             counter = 1
-#             new_name = base_name
-#             while UserEditedTemplate.objects.filter(name=new_name).exists():
-#                 new_name = f"{base_name} ({counter})"
-#                 counter += 1
-            
-#             edited_template.name = new_name
-            
-#             # Save the edited content to a new file
-#             file_name = f"{new_name}.html"
-#             new_file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
-            
-#             os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
-            
-#             with open(new_file_path, 'w', encoding='utf-8') as file:
-#                 file.write(request.POST.get('content'))
-            
-#             edited_template.template_path = new_file_path
-#             edited_template.save()
-            
-#             return redirect('user_templates')
-#     else:
-#         form = UserEditedTemplateForm(initial={'content': initial_content})
-
-#     return render(request, 'edit_template.html', {
-#         'form': form,
-#         'original_template': original_template,
-#         'initial_content': initial_content
-#     })
-
-# @login_required
-# def user_templates_view(request):
-#     # Fetch user-edited templates for the logged-in user
-#     templates = UserEditedTemplate.objects.filter(user=request.user)
-    
-#     # Load content of each template
-#     for template in templates:
-#         try:
-#             with open(template.template_path, 'r', encoding='utf-8') as file:
-#                 template.content = file.read()  # Add content to the template object
-#         except FileNotFoundError:
-#             template.content = 'Content not available'  # Handle file not found
-    
-#     # Render the templates with their content
-#     return render(request, 'user_templates.html', {'templates': templates})
-
-
-# @login_required
-# def edit_user_template(request, pk):
-#     # Get the user-edited template for the logged-in user
-#     template = get_object_or_404(UserEditedTemplate, pk=pk, user=request.user)
-    
-#     # Load the existing content of the template
-#     try:
-#         with open(template.template_path, 'r', encoding='utf-8') as file:
-#             initial_content = file.read()
-#     except FileNotFoundError:
-#         initial_content = ''
-    
-#     if request.method == 'POST':
-#         form = UserEditedTemplateForm(request.POST, instance=template)
-#         if form.is_valid():
-#             updated_template = form.save(commit=False)
-#             updated_template.user = request.user
-            
-#             # Save the updated content to the file
-#             new_content = request.POST.get('content')
-#             with open(template.template_path, 'w', encoding='utf-8') as file:
-#                 file.write(new_content)
-            
-#             updated_template.save()
-#             return redirect('user_templates')
-#     else:
-#         # Ensure that the form is initialized with the current content
-#         form = UserEditedTemplateForm(instance=template)
-#         form.fields['content'].initial = initial_content
-    
-#     return render(request, 'edit_user_template.html', {
-#         'form': form,
-#         'template': template,
-#     })
-
-
-# @login_required
-# def email_template_create(request):
-#     if request.method == 'POST':
-#         form = UserEditedTemplateForm(request.POST)
-#         if form.is_valid():
-#             new_template = form.save(commit=False)
-#             new_template.user = request.user
-            
-#             # Get the HTML content from the form
-#             content = form.cleaned_data['content']
-            
-#             # Save the content to a new file in the user_edited_templates directory
-#             file_name = f"{new_template.name}.html"
-#             file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
-            
-#             # Ensure the directory exists
-#             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
-#             # Save the HTML content to the file
-#             with open(file_path, 'w', encoding='utf-8') as file:
-#                 file.write(content)
-            
-#             # Update the path in the model and save it
-#             new_template.template_path = file_path
-#             new_template.original_template = None  # Since it's a new template
-#             new_template.save()
-            
-#             return redirect('user_templates')
-#     else:
-#         form = UserEditedTemplateForm()
-
-#     return render(request, 'email_template_form.html', {
-#         'form': form,
-#     })
-
-
-# @login_required
-# def email_template_delete(request, pk):   # this is user edited template delete only name change 
-#     template = get_object_or_404(UserEditedTemplate, pk=pk)
-    
-#     if request.method == 'POST':
-#         try:
-#             os.remove(template.template_path)
-#         except FileNotFoundError:
-#             pass  
-#         template.delete()
-#         return redirect('user_templates') 
-    
-#     return render(request, 'email_template_form.html', {'template': template})
-
 
 def template_to_dict(template):
     return {
@@ -375,74 +173,53 @@ def template_to_dict(template):
         # Add other fields as needed
     }
 
-@login_required
-def email_template_form(request, pk=None):
-    if pk:
-        template = get_object_or_404(EmailTemplate, pk=pk)
-        form_title = 'Edit Email Template'
-    else:
-        template = EmailTemplate()
-        form_title = 'Create New Email Template'
-    
-    if request.method == 'POST':
-        form = EmailTemplateForm(request.POST, instance=template)
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True, 'redirect': 'email_template_list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-    
-    form = EmailTemplateForm(instance=template)
-    return JsonResponse({'form': form.as_p(), 'form_title': form_title})
-
-@login_required
-def edit_template(request, pk):
-    original_template = get_object_or_404(EmailTemplate, pk=pk)
-    
-    if request.method == 'POST':
-        form = UserEditedTemplateForm(request.POST)
-        if form.is_valid():
-            user_edited_template = form.save(commit=False)
-            user_edited_template.original_template = original_template
-            user_edited_template.user = request.user
-            
-            # Copy and save the edited template
-            template_path = os.path.join(settings.EDITED_TEMPLATES_DIR, os.path.basename(user_edited_template.template_path))
-            shutil.copy(user_edited_template.template_path, template_path)
-            user_edited_template.template_path = template_path
-            user_edited_template.save()
-            
-            return JsonResponse({'success': True, 'redirect': 'email_template_list'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-    
-    form = UserEditedTemplateForm()
-    return JsonResponse({'form': form.as_p(), 'form_title': 'Edit Template'})
-
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def email_template_list(request):
-    templates = EmailTemplate.objects.all()
-    return JsonResponse({'templates': list(templates.values())})
+    # Select only the 'id' and 'name' fields from the EmailTemplate model
+    templates = EmailTemplate.objects.values('id', 'name')
+    return JsonResponse({'templates': list(templates)})
+ 
+@permission_classes([IsAuthenticated])
+class ViewTemplateById(APIView):
 
-@login_required
-def default_templates_view(request):
-    templates = EmailTemplate.objects.all()
-    return JsonResponse({'templates': list(templates.values())})
+    def get(self, request, template_id):
+        # Fetch the template by ID
+        template = get_object_or_404(EmailTemplate, id=template_id)
+        
+        try:
+            # Open and read the template file
+            with open(template.template_path, 'r', encoding='utf-8') as file:
+                content = file.read().replace('\n', '')
+        except FileNotFoundError:
+            return Response({"error": "Template file not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@login_required
-def edit_template_view(request, template_id):
+        # Return the HTML content in the response
+        return Response({"id": template.id, "name": template.name, "html_content": content}, status=status.HTTP_200_OK)
+
+
+
+@permission_classes([IsAuthenticated])
+@api_view(["POST"])
+def edit_email_template(request, template_id):
+    # Get the original template
     original_template = get_object_or_404(EmailTemplate, id=template_id)
     template_path = original_template.template_path
     
+    # Read initial content from the file
     try:
         if os.path.exists(template_path):
             with open(template_path, 'r', encoding='utf-8') as file:
                 initial_content = file.read()
+                initial_content = replace_special_characters(initial_content)
         else:
             initial_content = ''
     except Exception as e:
         initial_content = ''
     
+    # Process form submission
     if request.method == 'POST':
         form = UserEditedTemplateForm(request.POST)
         if form.is_valid():
@@ -452,9 +229,10 @@ def edit_template_view(request, template_id):
             
             # Generate a unique name for the edited template
             base_name = f"{original_template.name} - Edited"
-            counter = 1
             new_name = base_name
-            while UserEditedTemplate.objects.filter(name=new_name).exists():
+            counter = 1
+            # Check if the name already exists
+            while UserEditedTemplate.objects.filter(name=new_name, user=request.user).exists():
                 new_name = f"{base_name} ({counter})"
                 counter += 1
             
@@ -463,91 +241,122 @@ def edit_template_view(request, template_id):
             new_file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
             os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
             
+            print("Before replacement:", request.POST.get('content', ''))
+            content = replace_special_characters(request.POST.get('content', ''))
+            print("After replacement:", content)
+            
             with open(new_file_path, 'w', encoding='utf-8') as file:
-                file.write(request.POST.get('content'))
+                file.write(content)
             
             edited_template.template_path = new_file_path
             edited_template.save()
             
-            return JsonResponse({'success': True, 'redirect': 'user_templates'})
+            return JsonResponse({'message' : 'Your Template is created Sucessfully','success': True, 'redirect': 'user_templates'})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
     
-    form = UserEditedTemplateForm(initial={'content': initial_content})
+    form = UserEditedTemplateForm(initial={'content': replace_special_characters(initial_content)})
     return JsonResponse({'form': form.as_p(), 'initial_content': initial_content})
 
-@login_required
-def user_templates_view(request):
-    templates = UserEditedTemplate.objects.filter(user=request.user)
-    
-    for template in templates:
-        try:
-            with open(template.template_path, 'r', encoding='utf-8') as file:
-                template.content = file.read()
-        except FileNotFoundError:
-            template.content = 'Content not available'
-    
-    return JsonResponse({'templates': [template_to_dict(t) for t in templates]})
 
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_templates_view(request):
+    if request.user.is_authenticated:
+        templates = UserEditedTemplate.objects.filter(user=request.user).values('id', 'name')
+        return JsonResponse({'templates': list(templates)})
+    else:
+        return JsonResponse({'error': 'User is not authenticated'}, status=401)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_template_by_id(request, pk):
+    template = get_object_or_404(UserEditedTemplate, pk=pk, user=request.user)
+    
+    # Read the file content from the path stored in the database
+    template_path = template.template_path
+    
+    if os.path.exists(template_path):
+        try:
+            with open(template_path, 'r', encoding='utf-8') as file:
+                content = file.read().replace('\n', '')
+        except Exception as e:
+            content = f'Error reading file: {str(e)}'
+    else:
+        content = 'Content not available'
+    
+    response_data = {
+        'id': template.id,
+        'name': template.name,
+        'content': content,
+    }
+    
+    return JsonResponse(response_data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def edit_user_template(request, pk):
+    # Ensure the user is authenticated
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'User must be authenticated.'}, status=401)
+    
     template = get_object_or_404(UserEditedTemplate, pk=pk, user=request.user)
     
     try:
         with open(template.template_path, 'r', encoding='utf-8') as file:
             initial_content = file.read()
     except FileNotFoundError:
-        initial_content = ''
+        return JsonResponse({'success': False, 'error': 'Template file not found.'}, status=404)
     
     if request.method == 'POST':
         form = UserEditedTemplateForm(request.POST, instance=template)
         if form.is_valid():
             updated_template = form.save(commit=False)
-            updated_template.user = request.user
             
-            new_content = request.POST.get('content')
+            new_content = form.cleaned_data['content']
             with open(template.template_path, 'w', encoding='utf-8') as file:
                 file.write(new_content)
             
             updated_template.save()
             return JsonResponse({'success': True, 'redirect': 'user_templates'})
         else:
-            return JsonResponse({'success': False, 'errors': form.errors})
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     
     form = UserEditedTemplateForm(instance=template)
     form.fields['content'].initial = initial_content
     
-    return JsonResponse({'form': form.as_p(), 'template': template_to_dict(template)})
+    return JsonResponse({
+        'form': form.as_p(),
+        'initial_content': initial_content
+    })
 
-@login_required
-def email_template_create(request):
-    if request.method == 'POST':
-        form = UserEditedTemplateForm(request.POST)
-        if form.is_valid():
-            new_template = form.save(commit=False)
-            new_template.user = request.user
-            
-            content = form.cleaned_data['content']
-            file_name = f"{new_template.name}.html"
-            file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
-            with open(file_path, 'w', encoding='utf-8') as file:
-                file.write(content)
-            
-            new_template.template_path = file_path
-            new_template.original_template = None
-            new_template.save()
-            
-            return JsonResponse({'success': True, 'redirect': 'user_templates'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-    
-    form = UserEditedTemplateForm()
-    return JsonResponse({'form': form.as_p()})
 
-@login_required
-def email_template_delete(request, pk):  #this is for user edited template 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_user_template(request):
+    form = UserEditedTemplateForm(request.POST)
+    if form.is_valid():
+        new_template = form.save(commit=False)
+        new_template.user = request.user
+        
+        content = form.cleaned_data['content']
+        file_name = f"{new_template.name}.html"
+        file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(content)
+        
+        new_template.template_path = file_path
+        new_template.original_template = None
+        new_template.save()
+        
+        return JsonResponse({'success': True, 'redirect': 'user_templates'})
+    else:
+        return JsonResponse({'success': False, 'errors': form.errors})
+
+@permission_classes([IsAuthenticated])
+def delete_user_template(request, pk):  #this is for user edited template 
     template = get_object_or_404(UserEditedTemplate, pk=pk)
     
     if request.method == 'POST':

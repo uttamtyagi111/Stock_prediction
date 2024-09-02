@@ -2,18 +2,17 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import ssl
-from django.core.mail import get_connection, EmailMessage
+from django.core.mail import  EmailMessage
 
 load_dotenv()
 
-# Base directory
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Directory settings for email templates
 ORIGINAL_TEMPLATES_DIR = BASE_DIR / 'original_email_templates'
 EDITED_TEMPLATES_DIR = BASE_DIR / 'edited_email_templates'
 
-# Optional if needed
 EMAIL_TEMPLATES_DIR = BASE_DIR / 'templates'
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
@@ -22,17 +21,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# settings.py
-
-# # Session settings
-# SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-# SESSION_COOKIE_NAME = 'sessionid'
-# SESSION_COOKIE_AGE = 1209600  # 2 weeks
-# SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-# SESSION_SAVE_EVERY_REQUEST = True
-# SESSION_COOKIE_SECURE = False  # Set to True in production
-# SESSION_COOKIE_HTTPONLY = True
-# SESSION_COOKIE_SAMESITE = 'Lax'
 
 
 LOGIN_URL = '/login/'
@@ -92,9 +80,8 @@ CORS_ALLOWED_ORIGINS = [
     'https://127.0.0.1:3000',
     
 ]
-# Allow all origins
-CORS_ALLOW_ALL_ORIGINS = True
 
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'email_automation.urls'
@@ -126,11 +113,8 @@ DATABASES = {
 
 DATABASE_ROUTERS = ['authentication.database_router.DatabaseRouter']
 
-# settings.py
-AUTHENTICATION_BACKENDS = ['authentication.backends.EmailBackend','django.contrib.auth.backends.ModelBackend' ]
- # Default
 
-# AUTH_USER_MODEL = 'authentication.AppUser'
+AUTHENTICATION_BACKENDS = ['authentication.backends.EmailBackend','django.contrib.auth.backends.ModelBackend' ]
 
 
 AUTH_PASSWORD_VALIDATORS = [

@@ -1,10 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SenderViewSet, EmailTemplateViewSet, SendEmailsView, senders_list,sender_detail,smtp_server_create,sender_delete
-from .views import smtp_servers_list, smtp_server_detail,smtp_server_edit,sender_edit
-from .views import email_template_delete,email_template_form,email_template_list,email_template_create
-from .views import default_templates_view, edit_template_view, user_templates_view,edit_user_template
-from django.contrib.auth import views as auth_views
+from .views import SenderViewSet, EmailTemplateViewSet, SendEmailsView
+from .views import sender_edit, senders_list,sender_detail,sender_delete
+from .views import email_template_list,create_user_template,edit_user_template,delete_user_template,edit_email_template
+from .views import edit_email_template, user_templates_view,edit_user_template,ViewTemplateById,get_user_template_by_id
 from . import views
 
 router = DefaultRouter()
@@ -24,12 +23,12 @@ urlpatterns = [
     path('smtp-server/create/', views.smtp_server_create, name='smtp-server-create'),
     path('smtp-servers/edit/<int:pk>/', views.smtp_server_edit, name='smtp-server-edit'),
     path('smtp-servers/delete/<int:pk>/', views.smtp_server_delete, name='smtp-server-delete'),
-    # path('email-template/', email_template_form, name='email-template-form'),
-    path('email-template/', email_template_list, name='email_template_list'),
-    path('default-templates/', default_templates_view, name='default_templates'),
-    path('edit-template/<int:template_id>/', edit_template_view, name='edit_template'),
+    path('email-templates/', email_template_list, name='email_template_list'),
+    path('email-template/<int:template_id>/', ViewTemplateById.as_view(), name='view_template_by_id'),
+    path('email-template/edit/<int:template_id>/',edit_email_template, name='edit_template'),
     path('user-templates/', user_templates_view, name='user_templates'),
-    path('user-template/edit/<int:pk>/', edit_user_template, name='edit_user_template'),
-    path('email-template/create', email_template_create, name='email-template-create'),
-    path('email-templates/delete/<int:pk>/', email_template_delete, name='email-template-delete'),
+    path('user-template/<int:pk>/', get_user_template_by_id, name='get_user_template_by_id'),
+    path('user-template/edit/<int:pk>/', edit_user_template, name='edit-user-template'),
+    path('user-template/create/', create_user_template, name='create-user-template'),
+    path('user-templates/delete/<int:pk>/', delete_user_template, name='delete-user-template'),
  ]

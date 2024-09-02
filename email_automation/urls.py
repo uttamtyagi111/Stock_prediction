@@ -4,13 +4,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # Authentication URLs
     path('', include('authentication.urls')),
 
-    # Email sender URLs
     path('', include('email_sender.urls')),
 
-    # Admin URL
     path('admin/', admin.site.urls),
 ]
 if settings.DEBUG:
