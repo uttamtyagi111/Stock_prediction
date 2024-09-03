@@ -1,0 +1,242 @@
+{
+    "body": {
+        "rows": [
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://tenable.com\"><img alt=\"Tenable Network Security\" class=\"top-image\" src=\"https://info.tenable.com/rs/tenable/images/tenable-white-email.png\" style=\"line-height: 1;width: 600px;\"/></a>",
+                    "url": "https://tenable.com",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/tenable-white-email.png",
+                    "alt": "Tenable Network Security",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/webinar-no-text.png",
+                    "alt": "",
+                    "width": "560",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"#\" style=\"color:#ffffff; background-color: #ff8300;  border: 10px solid #ff8300; border-radius: 3px; text-decoration:none;\">Download Now</a>",
+                    "url": "#",
+                    "backgroundColor": "#ff8300",
+                    "color": "#ffffff",
+                    "padding": "",
+                    "borderRadius": "3px",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"#\" style=\"color:#ffffff; background-color: #ff8300; border: 20px solid #ff8300; border-left: 20px solid #ff8300; border-right: 20px solid #ff8300; border-top: 10px solid #ff8300; border-bottom: 10px solid #ff8300;border-radius: 3px; text-decoration:none;\">Download Now</a>",
+                    "url": "#",
+                    "backgroundColor": "#ff8300",
+                    "color": "#ffffff",
+                    "padding": "",
+                    "borderRadius": "3px",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"{{system.forwardToFriendLink}}\" style=\"color: #00a5b5;\">Forward this Email</a>",
+                    "url": "{{system.forwardToFriendLink}}",
+                    "backgroundColor": "",
+                    "color": "#00a5b5",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.tenable.com/evaluate\" style=\"color:#ffffff; background-color: #00a5b5;  border-top: 10px solid #00a5b5; border-bottom: 10px solid #00a5b5; border-left: 20px solid #00a5b5; border-right: 20px solid #00a5b5; border-radius: 3px; text-decoration:none;\">Try Now</a>",
+                    "url": "https://www.tenable.com/evaluate",
+                    "backgroundColor": "#00a5b5",
+                    "color": "#ffffff",
+                    "padding": "",
+                    "borderRadius": "3px",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.tenable.com/products/buy\" style=\"color:#ffffff; background-color: #00a5b5;  border-top: 10px solid #00a5b5; border-bottom: 10px solid #00a5b5; border-left: 20px solid #00a5b5; border-right: 20px solid #00a5b5; border-radius: 3px; text-decoration:none;\">Buy Now</a>",
+                    "url": "https://www.tenable.com/products/buy",
+                    "backgroundColor": "#00a5b5",
+                    "color": "#ffffff",
+                    "padding": "",
+                    "borderRadius": "3px",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.tenable.com/blog\"><img src=\"https://info.tenable.com/rs/tenable/images/rss-teal.png\"/></a>",
+                    "url": "https://www.tenable.com/blog",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/rss-teal.png",
+                    "alt": "",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://twitter.com/tenablesecurity\"><img src=\"https://info.tenable.com/rs/tenable/images/twitter-teal.png\"/></a>",
+                    "url": "https://twitter.com/tenablesecurity",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/twitter-teal.png",
+                    "alt": "",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.facebook.com/Tenable.Inc\"><img src=\"https://info.tenable.com/rs/tenable/images/facebook-teal.png\"/></a>",
+                    "url": "https://www.facebook.com/Tenable.Inc",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/facebook-teal.png",
+                    "alt": "",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.youtube.com/tenablesecurity\"><img src=\"https://info.tenable.com/rs/tenable/images/youtube-teal.png\"/></a>",
+                    "url": "https://www.youtube.com/tenablesecurity",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/youtube-teal.png",
+                    "alt": "",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.linkedin.com/company/tenable-network-security\"><img src=\"https://info.tenable.com/rs/tenable/images/linkedin-teal.png\"/></a>",
+                    "url": "https://www.linkedin.com/company/tenable-network-security",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/linkedin-teal.png",
+                    "alt": "",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://plus.google.com/107158297098429070217\"><img src=\"https://info.tenable.com/rs/tenable/images/google-teal.png\"/></a>",
+                    "url": "https://plus.google.com/107158297098429070217",
+                    "backgroundColor": "",
+                    "color": "",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "image",
+                "values": {
+                    "src": "https://info.tenable.com/rs/tenable/images/google-teal.png",
+                    "alt": "",
+                    "width": "auto",
+                    "height": "auto",
+                    "align": "center"
+                }
+            },
+            {
+                "type": "button",
+                "values": {
+                    "text": "<a href=\"https://www.tenable.com/contact-tenable\" style=\"color: #00a5b5;\">Contact Us</a>",
+                    "url": "https://www.tenable.com/contact-tenable",
+                    "backgroundColor": "",
+                    "color": "#00a5b5",
+                    "padding": "",
+                    "borderRadius": "",
+                    "align": "center"
+                }
+            }
+        ]
+    }
+}

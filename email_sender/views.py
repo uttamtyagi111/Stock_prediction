@@ -25,10 +25,12 @@ from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
-@api_view(['GET'])
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def senders_list(request):
-    senders = Sender.objects.filter(user=request.user)
+    request_user_id = request.data.get('user_id')
+    senders = Sender.objects.filter(user_id=request_user_id)
     serializer = SenderSerializer(senders, many=True)
     return Response({'senders': serializer.data})
 
@@ -44,41 +46,34 @@ def sender_detail(request, pk):
 def create_sender(request):
     serializer = SenderSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save(user=request.user)
-        return Response({'message': 'Sender created successfully.','sender': serializer.data}, status=status.HTTP_201_CREATED)
+        sender = serializer.save(user=request.user)
+        return Response({'message': 'Sender created successfully.', 'sender': SenderSerializer(sender).data}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def sender_edit(request, pk):
-    sender = get_object_or_404(Sender, pk=pk, user=request.user)
+    sender = get_object_or_404(Sender, pk=pk, user_id=request.user.id)
     form = SenderForm(request.data, instance=sender)
     
     if form.is_valid():
         sender = form.save(commit=False)
-        sender.user = request.user
+        sender.user_id = request.user.id
         sender.save()
-        return JsonResponse({'message': 'Sender updated successfully.','success': True, 'redirect': 'senders-list'}, status=200)
+        return JsonResponse({'message': 'Sender updated successfully.', 'success': True, 'redirect': 'senders-list'}, status=200)
     else:
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def sender_delete(request, pk):
-    sender = get_object_or_404(Sender, pk=pk, user=request.user)
-    if request.method == 'POST':
-        sender.delete()
-        return Response({'message': 'Sender deleted successfully.','success': True, 'redirect': 'senders-list'}, status=status.HTTP_204_NO_CONTENT)
-    
-    return Response({'sender': sender_to_dict(sender)})
+    sender = Sender.objects.filter(pk=pk, user_id=request.user.id).first()
+    if sender is None:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+    sender.delete()
+    return Response({'meesage':'sender deleted successfully'},status=status.HTTP_204_NO_CONTENT)
 
-def sender_to_dict(sender):
-    return {
-        'id': sender.id,
-        'name': sender.name,
-        'email': sender.email,
-    }
 
 
 
@@ -94,10 +89,11 @@ def smtp_server_to_dict(smtp_server):
         'use_ssl': smtp_server.use_ssl,
     }
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def smtp_servers_list(request):
-    servers = SMTPServer.objects.filter(user=request.user)
+    request_user_id = request.data.get('user_id')
+    servers = SMTPServer.objects.filter(user_id=request_user_id)
     serializer = SMTPServerSerializer(servers, many=True)
     return Response({'servers': serializer.data}, status=status.HTTP_200_OK)
 
@@ -120,12 +116,12 @@ def smtp_server_create(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def smtp_server_edit(request, pk):
-    smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
+    smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.userid)
     form = SMTPServerForm(request.data, instance=smtp_server)
     
     if form.is_valid():
         smtp_server = form.save(commit=False)
-        smtp_server.user = request.user
+        smtp_server.user_id = request.user_id
         smtp_server.save()
         return JsonResponse({'message': 'SMTP server updated successfully.', 'success': True, 'redirect': 'smtp-servers-list'}, status=200)
     else:
@@ -134,9 +130,12 @@ def smtp_server_edit(request, pk):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def smtp_server_delete(request, pk):
-    smtp_server = get_object_or_404(SMTPServer, pk=pk, user=request.user)
+    smtp_server = SMTPServer.objects.filter(pk=pk, user_id=request.user.id).first()
+    if smtp_server is None:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+    
     smtp_server.delete()
-    return Response({'message': 'SMTP server deleted successfully.', 'success': True, 'redirect': 'smtp-servers-list'}, status=status.HTTP_204_NO_CONTENT)
+    return Response({'meesage':'smtp-server deleted successfully'},status=status.HTTP_204_NO_CONTENT)
 
 
 def replace_special_characters(content):
@@ -352,9 +351,6 @@ def delete_user_template(request, pk):  #this is for user edited template
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
     
 
-
-
-
 class EmailTemplateViewSet(viewsets.ModelViewSet):
     queryset = EmailTemplate.objects.all()
     serializer_class = EmailTemplateSerializer
@@ -363,10 +359,9 @@ class SenderViewSet(viewsets.ModelViewSet):
     queryset = Sender.objects.all()
     serializer_class = SenderSerializer
     
-
 class SendEmailsView(APIView):
     # permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access this view
-
+    
     def get(self, request, *args, **kwargs):
         return render(request, 'send_emails.html')
     from django.shortcuts import render

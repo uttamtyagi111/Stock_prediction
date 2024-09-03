@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -50,7 +51,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
 }
-from datetime import timedelta
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=2),
@@ -76,13 +76,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3001',
-    'https://127.0.0.1:3000',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
     
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# Example settings
+SESSION_COOKIE_AGE = 1209600  # Two weeks
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 
 ROOT_URLCONF = 'email_automation.urls'
 

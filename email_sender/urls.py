@@ -7,13 +7,13 @@ from .views import edit_email_template, user_templates_view,edit_user_template,V
 from . import views
 
 router = DefaultRouter()
-router.register(r'senders', SenderViewSet)
+# router.register(r'senders', SenderViewSet)
 router.register(r'email-templates', EmailTemplateViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
     path('send-emails/', SendEmailsView.as_view(), name='send-emails'),
-    path('senders/', senders_list, name='senders-list'),
+    path('senders/', views.senders_list, name='senders-list'),
     path('senders/<int:pk>/', sender_detail, name='sender_detail'),
     path('sender/create/', views.create_sender, name='create-sender'),
     path('senders/edit/<int:pk>/', sender_edit, name='sender-edit'),

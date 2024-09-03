@@ -65,7 +65,7 @@ def parse_html_to_json(html_content):
     return json_output
 
 # File path
-file_path = r'C:\Users\Wish\Downloads\New folder\New folder\Django-API\email_templates\new.html'
+file_path = r'C:\Users\Wish\Downloads\New folder\New folder\Django-API\email_templates\code2.html'
 
 # Read HTML file and convert to JSON
 with open(file_path, 'r', encoding='utf-8') as file:
