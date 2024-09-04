@@ -18,20 +18,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from .forms import CreateUserForm
 from django.http import JsonResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
-from rest_framework.permissions import AllowAny
-from .forms import EmailLoginForm
-from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.views import TokenRefreshView
-
-
 
 
 class ProtectedView(APIView):
@@ -43,7 +37,6 @@ class ProtectedView(APIView):
 
 class CustomTokenRefreshView(TokenRefreshView):
     pass
-
 
 logger = logging.getLogger(__name__)
 
@@ -117,12 +110,8 @@ def home(request):
     }
     return JsonResponse(data)
 
-
 def generate_otp():
     return str(random.randint(100000, 999999))
-
-
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -134,17 +123,16 @@ def registerPage(request):
 
     if form.is_valid():
         email = form.cleaned_data.get('email')
-
+        username = form.cleaned_data.get('username')
 
         if User.objects.filter(email=email).exists():
             return Response({
                 'message': 'Email is already registered. Please log in or use a different email.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        
         otp = generate_otp()
         cache.set(f'otp_{email}', otp, timeout=600) 
-        send_otp_email(email, otp) 
+        send_otp_email(email, otp,username) 
 
         user_data = {
             'username': form.cleaned_data.get('username'),
@@ -162,9 +150,6 @@ def registerPage(request):
         'form_valid': form.is_valid(),
         'errors': form.errors
     }, status=status.HTTP_400_BAD_REQUEST)
-
-
-
 
 
 
