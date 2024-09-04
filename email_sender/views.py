@@ -447,7 +447,7 @@ class SendEmailsView(APIView):
                         username=smtp_server.username,
                         password=smtp_server.password,
                         use_tls=smtp_server.use_tls,
-                        use_ssl=smtp_server.use_ssl
+                        # use_ssl=smtp_server.use_ssl/
                     )
                     
                     email.connection = connection

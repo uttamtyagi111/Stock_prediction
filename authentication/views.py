@@ -22,6 +22,7 @@ from django.http import JsonResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
+from django.contrib.auth import authenticate, login as django_login,logout
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
@@ -43,21 +44,26 @@ logger = logging.getLogger(__name__)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def loginPage(request):
-    print("Request received:", request.data) 
+    logout(request)
+    # print("Request received:", request.data) 
     
     form = EmailLoginForm(request.data or None)
     
     if form.is_valid():
         email = form.cleaned_data['email']
         password = form.cleaned_data['password']
-        print(f"Email: {email}, Password: {password}")  
+        # print(f"Email: {email}, Password: {password}") 
+        print(f"Attempting login with email: {email}") 
         
         user = authenticate(request, email=email, password=password)
-        print(f"User: {user}") 
+        # print(f"User: {user}") 
+        print(f"Authenticated user: {user}")
         
         if user:
             if user.is_active:
+                django_login(request, user)
                 refresh = RefreshToken.for_user(user)
+                print(f"Logged-in user: {user.username} (ID: {user.id})")
                 return JsonResponse({
                     'user_id': user.id,
                     'access': str(refresh.access_token),
