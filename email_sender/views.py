@@ -2,14 +2,12 @@ from datetime import datetime
 from django.core.mail import EmailMessage, get_connection
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from django.template import Template, Context
 from django.template.exceptions import TemplateDoesNotExist
 from rest_framework.permissions import IsAuthenticated
 import csv,time,logging,os
 from django.conf import settings
 from io import StringIO
-from django.conf import settings
 from .serializers import EmailSendSerializer, EmailTemplateSerializer, SenderSerializer,SMTPServerSerializer
 from .models import EmailTemplate, Sender, SMTPServer, UserEditedTemplate
 from rest_framework import viewsets
@@ -19,8 +17,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Sender
-from .serializers import SenderSerializer
 from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
@@ -74,20 +70,6 @@ def sender_delete(request, pk):
     sender.delete()
     return Response({'meesage':'sender deleted successfully'},status=status.HTTP_204_NO_CONTENT)
 
-
-
-
-def smtp_server_to_dict(smtp_server):
-    return {
-        'id': smtp_server.id,
-        'name': smtp_server.name,
-        'host': smtp_server.host,
-        'port': smtp_server.port,
-        'username': smtp_server.username,
-        'email': smtp_server.email,
-        'use_tls': smtp_server.use_tls,
-        # 'use_ssl': smtp_server.use_ssl,
-    }
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
