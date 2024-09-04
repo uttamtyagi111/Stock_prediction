@@ -35,7 +35,7 @@ class SMTPServer(models.Model):
     username = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
     use_tls = models.BooleanField(default=True)
-    use_ssl = models.BooleanField(default=False)
+    # use_ssl = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

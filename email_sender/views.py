@@ -86,7 +86,7 @@ def smtp_server_to_dict(smtp_server):
         'username': smtp_server.username,
         'email': smtp_server.email,
         'use_tls': smtp_server.use_tls,
-        'use_ssl': smtp_server.use_ssl,
+        # 'use_ssl': smtp_server.use_ssl,
     }
 
 @api_view(['POST'])

@@ -14,7 +14,7 @@ class SenderSerializer(serializers.ModelSerializer):
 class SMTPServerSerializer(serializers.ModelSerializer):
     class Meta:
         model = SMTPServer
-        fields = ['id', 'name', 'host', 'port', 'username', 'password', 'use_tls', 'use_ssl']
+        fields = ['id', 'name', 'host', 'port', 'username', 'password', 'use_tls']
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
     class Meta:

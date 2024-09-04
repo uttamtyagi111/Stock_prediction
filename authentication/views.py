@@ -66,6 +66,7 @@ def loginPage(request):
             if user.is_active:
                 refresh = RefreshToken.for_user(user)
                 return JsonResponse({
+                    'user_id': user.id,
                     'access': str(refresh.access_token),
                     'refresh': str(refresh),
                     'redirect': 'home',
