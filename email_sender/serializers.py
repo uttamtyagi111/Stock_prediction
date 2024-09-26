@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sender, SMTPServer, EmailTemplate
+from .models import Sender, SMTPServer,UploadedFile
 
 
 class SenderSerializer(serializers.ModelSerializer):
@@ -7,6 +7,11 @@ class SenderSerializer(serializers.ModelSerializer):
         model = Sender
         fields = ['id','name', 'email']
         # read_only_fields = ['id', 'user_id'] 
+        
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = ['id', 'user_id', 'name', 'file_url']  
        
 
 
@@ -16,10 +21,7 @@ class SMTPServerSerializer(serializers.ModelSerializer):
         model = SMTPServer
         fields = ['id', 'name', 'host', 'port', 'username', 'password', 'use_tls']
 
-class EmailTemplateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EmailTemplate
-        fields = ['id', 'name'] 
+
         
 
 class EmailSendSerializer(serializers.Serializer):
@@ -39,7 +41,7 @@ class EmailSendSerializer(serializers.Serializer):
     subject = serializers.CharField(max_length=255) 
     website_url = serializers.URLField()
     email_list = serializers.FileField()
-    template_id = serializers.IntegerField()
+    uploaded_file_key = serializers.CharField() 
     
     def validate_email_list(self, value):
         if not value.name.endswith('.csv'):

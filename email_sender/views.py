@@ -1,18 +1,22 @@
-from datetime import datetime
-from django.core.mail import EmailMessage, get_connection
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.template import Template, Context
-from django.template.exceptions import TemplateDoesNotExist
+from django.core.files.base import ContentFile
+import uuid
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-import csv,time,logging,os
-from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework import status
+from django.core.mail import EmailMessage, get_connection
+import time
+from django.utils import timezone
 from io import StringIO
-from .serializers import EmailSendSerializer, EmailTemplateSerializer, SenderSerializer,SMTPServerSerializer
-from .models import EmailTemplate, Sender, SMTPServer, UserEditedTemplate
+from django.template import Template, Context
+from rest_framework.permissions import IsAuthenticated
+import csv,time,logging,os,boto3,time
+from django.conf import settings
+from .serializers import EmailSendSerializer,  SenderSerializer,SMTPServerSerializer,UploadedFileSerializer
+from .models import  Sender, SMTPServer, UploadedFile
 from rest_framework import viewsets
 from django.shortcuts import render, get_object_or_404
-from .forms import SenderForm, SMTPServerForm, UserEditedTemplateForm
+from .forms import SenderForm, SMTPServerForm
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -133,245 +137,303 @@ def replace_special_characters(content):
     return content
     
 
-def template_to_dict(template):
-    return {
-        'id': template.id,
-        'name': template.name,
-        'template_path': template.template_path,
-        'content': template.content,
-        # Add other fields as needed
-    }
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def email_template_list(request):
-    # Select only the 'id' and 'name' fields from the EmailTemplate model
-    templates = EmailTemplate.objects.values('id', 'name')
-    return JsonResponse({'templates': list(templates)})
- 
-@permission_classes([IsAuthenticated])
-class ViewTemplateById(APIView):
 
-    def get(self, request, template_id):
-        template = get_object_or_404(EmailTemplate, id=template_id)
+
+###############################
+
+
+logger = logging.getLogger(__name__)
+
+class UploadHTMLToS3(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is logged in
+    
+    def post(self, request):
+        logger.debug(f"FILES: {request.FILES}")
+        logger.debug(f"DATA: {request.data}")
+
+        html_content = None
+
+        # Check if the file is provided in request.FILES (file upload)
+        if 'file' in request.FILES:
+            file = request.FILES['file']
+            if not file.name.endswith('.html'):
+                return Response({'error': 'File must be an HTML file.'}, status=status.HTTP_400_BAD_REQUEST)
+            html_content = file.read()  # Read the file as bytes
         
+        # Check if raw HTML content is provided
+        elif 'html_content' in request.data:
+            html_content = request.data.get('html_content')
+            if not isinstance(html_content, str):
+                return Response({'error': 'HTML content must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
+            html_content = html_content.encode('utf-8')  # Convert string to bytes
+        
+        # If no valid content is provided
+        if not html_content:
+            return Response({'error': 'No HTML content provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate a unique filename for the HTML file
+        file_name = f"{uuid.uuid4()}.html"
+
+        # Connect to S3
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
+
         try:
-            with open(template.template_path, 'r', encoding='utf-8') as file:
-                content = file.read().replace('\n', '')
-        except FileNotFoundError:
-            return Response({"error": "Template file not found."}, status=status.HTTP_404_NOT_FOUND)
+            s3.put_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=file_name,
+                Body=html_content,
+                ContentType='text/html'
+            )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"S3 upload failed: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"id": template.id, "name": template.name, "html_content": content}, status=status.HTTP_200_OK)
+        file_url = f"{settings.AWS_S3_FILE_URL}{file_name}"
+
+        # Create a new UploadedFile instance
+        uploaded_file = UploadedFile.objects.create(
+            name=file_name,
+            file_url=file_url,
+            user=request.user  
+        )
+
+        return Response({
+            'user_id': request.user.id,
+            'name': uploaded_file.name,
+            'file_url': uploaded_file.file_url,
+            'file_key': file_name  # Include the file key in the response
+        }, status=status.HTTP_201_CREATED)
 
 
+# from django.core.files.base import ContentFile
+# import uuid
+# import boto3
+# import logging
+# from rest_framework.response import Response
+# from rest_framework.views import APIView
+# from rest_framework import status
+# from django.conf import settings
+# from .models import UploadedFile  # Import the UploadedFile model
+# from rest_framework.permissions import IsAuthenticated
 
-@permission_classes([IsAuthenticated])
-@api_view(["POST"])
-def edit_email_template(request, template_id):
-    original_template = get_object_or_404(EmailTemplate, id=template_id)
-    template_path = original_template.template_path
+# logger = logging.getLogger(__name__)
+
+# class UploadHTMLToS3(APIView):
+#     permission_classes = [IsAuthenticated]  # Ensure the user is logged in
     
-    try:
-        if os.path.exists(template_path):
-            with open(template_path, 'r', encoding='utf-8') as file:
-                initial_content = file.read()
-                initial_content = replace_special_characters(initial_content)
-        else:
-            initial_content = ''
-    except Exception as e:
-        initial_content = ''
+#     def post(self, request):
+#         logger.debug(f"FILES: {request.FILES}")
+#         logger.debug(f"DATA: {request.data}")
+
+#         html_content = None
+
+#         # Check if the file is provided in request.FILES (file upload)
+#         if 'file' in request.FILES:
+#             file = request.FILES['file']
+#             if not file.name.endswith('.html'):
+#                 return Response({'error': 'File must be an HTML file.'}, status=status.HTTP_400_BAD_REQUEST)
+#             html_content = file.read()  # Read the file as bytes
+        
+#         # Check if raw HTML content is provided
+#         elif 'html_content' in request.data:
+#             html_content = request.data.get('html_content')
+#             if not isinstance(html_content, str):
+#                 return Response({'error': 'HTML content must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
+#             html_content = html_content.encode('utf-8')  # Convert string to bytes
+        
+#         # If no valid content is provided
+#         if not html_content:
+#             return Response({'error': 'No HTML content provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Generate a unique filename for the HTML file
+#         file_name = f"{uuid.uuid4()}.html"
+
+#         # Connect to S3
+#         s3 = boto3.client(
+#             's3',
+#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+#             region_name=settings.AWS_S3_REGION_NAME
+#         )
+
+#         try:
+#             s3.put_object(
+#                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+#                 Key=file_name,
+#                 Body=html_content,
+#                 ContentType='text/html'
+#             )
+#         except Exception as e:
+#             logger.error(f"S3 upload failed: {str(e)}")
+#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#         file_url = f"{settings.AWS_S3_FILE_URL}{file_name}"
+
+#         uploaded_file = UploadedFile.objects.create(
+#             name=file_name,
+#             file_url=file_url,
+#             user=request.user  
+#         )
+
+#         return Response({
+#             'user_id': request.user.id,
+#             'name': uploaded_file.name,
+#             'file_url': uploaded_file.file_url
+#         }, status=status.HTTP_201_CREATED)
+
+
+
+
+class UploadedFileList(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def get(self, request):
+        uploaded_files = UploadedFile.objects.filter(user=request.user)  # Fetch user's uploaded files
+        serializer = UploadedFileSerializer(uploaded_files, many=True)
+        return Response(serializer.data)
+
+
+from django.shortcuts import get_object_or_404
+from .models import UploadedFile  # Ensure this matches your actual model name
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
+import boto3
+from django.conf import settings
+
+class UpdateUploadedFile(APIView):
+    permission_classes = [IsAuthenticated]
     
-    # Process form submission
-    if request.method == 'POST':
-        form = UserEditedTemplateForm(request.POST)
-        if form.is_valid():
-            edited_template = form.save(commit=False)
-            edited_template.original_template = original_template
-            edited_template.user = request.user
-            
-            # Generate a unique name for the edited template
-            base_name = f"{original_template.name} - Edited"
-            new_name = base_name
-            counter = 1
-            # Check if the name already exists
-            while UserEditedTemplate.objects.filter(name=new_name, user=request.user).exists():
-                new_name = f"{base_name} ({counter})"
+    def put(self, request, file_id):
+        # Get the existing file record
+        uploaded_file = get_object_or_404(UploadedFile, id=file_id)
+        
+        # Initialize S3 client
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
+
+        # Check if the file exists in S3
+        existing_file_name = uploaded_file.name
+        
+        # Delete the old file from S3
+        try:
+            s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_file_name)
+        except Exception as e:
+            return Response({'error': f'Failed to delete old file: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Read the new file from request
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        file = request.FILES['file']
+
+        # Generate a new file name if the file already exists in S3
+        counter = 1
+        new_file_name = existing_file_name
+
+        while True:
+            try:
+                s3.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=new_file_name)
+                new_file_name = f"{existing_file_name.split('.')[0]}({counter}).{existing_file_name.split('.')[-1]}"
                 counter += 1
-            
-            edited_template.name = new_name
-            file_name = f"{new_name}.html"
-            new_file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
-            os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
-            
-            print("Before replacement:", request.POST.get('content', ''))
-            content = replace_special_characters(request.POST.get('content', ''))
-            print("After replacement:", content)
-            
-            with open(new_file_path, 'w', encoding='utf-8') as file:
-                file.write(content)
-            
-            edited_template.template_path = new_file_path
-            edited_template.save()
-            
-            return JsonResponse({'message' : 'Your Template is created Sucessfully','success': True, 'redirect': 'user_templates'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors})
-    
-    form = UserEditedTemplateForm(initial={'content': replace_special_characters(initial_content)})
-    return JsonResponse({'form': form.as_p(), 'initial_content': initial_content})
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_templates_view(request):
-    if request.user.is_authenticated:
-        templates = UserEditedTemplate.objects.filter(user=request.user).values('id', 'name')
-        return JsonResponse({'templates': list(templates)})
-    else:
-        return JsonResponse({'error': 'User is not authenticated'}, status=401)
-    
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_user_template_by_id(request, pk):
-    template = get_object_or_404(UserEditedTemplate, pk=pk, user=request.user)
-    
-    # Read the file content from the path stored in the database
-    template_path = template.template_path
-    
-    if os.path.exists(template_path):
+            except s3.exceptions.ClientError:
+                # If the file does not exist, break the loop
+                break
+        
+        # Upload the new file to S3
         try:
-            with open(template_path, 'r', encoding='utf-8') as file:
-                content = file.read().replace('\n', '')
+            s3.put_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=new_file_name,
+                Body=file,
+                ContentType='text/html'  # Adjust content type as needed
+            )
         except Exception as e:
-            content = f'Error reading file: {str(e)}'
-    else:
-        content = 'Content not available'
-    
-    response_data = {
-        'id': template.id,
-        'name': template.name,
-        'content': content,
-    }
-    
-    return JsonResponse(response_data)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def edit_user_template(request, pk):
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'User must be authenticated.'}, status=401)
-    
-    template = get_object_or_404(UserEditedTemplate, pk=pk, user=request.user)
-    
-    try:
-        with open(template.template_path, 'r', encoding='utf-8') as file:
-            initial_content = file.read()
-    except FileNotFoundError:
-        return JsonResponse({'success': False, 'error': 'Template file not found.'}, status=404)
-    
-    if request.method == 'POST':
-        form = UserEditedTemplateForm(request.POST, instance=template)
-        if form.is_valid():
-            updated_template = form.save(commit=False)
-            
-            new_content = form.cleaned_data['content']
-            with open(template.template_path, 'w', encoding='utf-8') as file:
-                file.write(new_content)
-            
-            updated_template.save()
-            return JsonResponse({'success': True, 'redirect': 'user_templates'})
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
-    form = UserEditedTemplateForm(instance=template)
-    form.fields['content'].initial = initial_content
-    
-    return JsonResponse({
-        'form': form.as_p(),
-        'initial_content': initial_content
-    })
+        # Update the uploaded file record in the database
+        uploaded_file.name = new_file_name
+        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_file_name}"  # Assuming you have this field in your model
+        uploaded_file.save()
+
+        return Response({'file_name': new_file_name, 'file_url': uploaded_file.file_url}, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_user_template(request):
-    form = UserEditedTemplateForm(request.POST)
-    if form.is_valid():
-        new_template = form.save(commit=False)
-        new_template.user = request.user
-        
-        content = form.cleaned_data['content']
-        file_name = f"{new_template.name}.html"
-        file_path = os.path.join(settings.MEDIA_ROOT, 'user_edited_templates', file_name)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(content)
-        
-        new_template.template_path = file_path
-        new_template.original_template = None
-        new_template.save()
-        
-        return JsonResponse({'success': True, 'redirect': 'user_templates'})
-    else:
-        return JsonResponse({'success': False, 'errors': form.errors})
-
-@permission_classes([IsAuthenticated])
-def delete_user_template(request, pk):  #this is for user edited template 
-    template = get_object_or_404(UserEditedTemplate, pk=pk)
-    
-    if request.method == 'POST':
-        try:
-            os.remove(template.template_path)
-        except FileNotFoundError:
-            pass  
-        template.delete()
-        return JsonResponse({'success': True,'message': 'Template deleted'})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
-    
-
-class EmailTemplateViewSet(viewsets.ModelViewSet):
-    queryset = EmailTemplate.objects.all()
-    serializer_class = EmailTemplateSerializer
 
 class SenderViewSet(viewsets.ModelViewSet):
     queryset = Sender.objects.all()
     serializer_class = SenderSerializer
     
+
+
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class FileUploadView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        file_serializer = UploadedFileSerializer(data=request.data)
+        if file_serializer.is_valid():
+            file_serializer.save()
+            return Response(file_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+logger = logging.getLogger(__name__)
+
 class SendEmailsView(APIView):
-    # permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access this view
     
-    def get(self, request, *args, **kwargs):
-        return render(request, 'send_emails.html')
-    from django.shortcuts import render
+    def get_html_content_from_s3(self, uploaded_file_key):
+        try:
+            s3 = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_S3_REGION_NAME
+            )
 
-
+            s3_object = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=uploaded_file_key)
+            return s3_object['Body'].read().decode('utf-8')
+        except Exception as e:
+            logger.error(f"Error fetching file from S3: {str(e)}")
+            raise
+    
+    
+    
     def post(self, request, *args, **kwargs):
         serializer = EmailSendSerializer(data=request.data)
         if serializer.is_valid():
             sender_ids = serializer.validated_data['sender_ids']
             smtp_server_ids = serializer.validated_data['smtp_server_ids']
-            template_id = serializer.validated_data['template_id']
             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
-            subject = serializer.validated_data.get('subject') # Get the subject from the request data
-            
+            subject = serializer.validated_data.get('subject')
+            uploaded_file_key = serializer.validated_data['uploaded_file_key']  # S3 file key
+
+
+            # Get the HTML content from S3
             try:
-                senders = Sender.objects.filter(id__in=sender_ids)
-                smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
-                template = EmailTemplate.objects.get(id=template_id)
-                
-                if not senders or not smtp_servers:
-                    return Response({'error': 'Invalid sender(s) or SMTP server(s).'}, status=status.HTTP_404_NOT_FOUND)
-            except EmailTemplate.DoesNotExist:
-                return Response({'error': 'Invalid email template.'}, status=status.HTTP_404_NOT_FOUND)
-            
+                file_content = self.get_html_content_from_s3(uploaded_file_key)
+            except Exception as e:
+                return Response({'error': f'Error fetching file from S3: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Get the S3 file content from the uploaded file key (the S3 object key)
+
+
+            # Email list CSV file handling
             email_list_file = request.FILES.get('email_list')
             if not email_list_file:
                 return Response({'error': 'No email list file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
             email_list = []
             try:
                 csv_file = email_list_file.read().decode('utf-8')
@@ -379,20 +441,20 @@ class SendEmailsView(APIView):
                 for row in csv_reader:
                     email_list.append(row)
             except Exception as e:
-                logger.error(f"Error reading CSV file: {str(e)}")
+                logger.error(f"Error processing email list: {str(e)}")
                 return Response({'error': 'Error processing the email list.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            logger.info(f"Available senders: {[sender.email for sender in senders]}")
-            logger.info(f"Available SMTP servers: {[smtp_server.host for smtp_server in smtp_servers]}")
-            
             total_emails = len(email_list)
             successful_sends = 0
             failed_sends = 0
             email_statuses = []
-            
+
+            senders = Sender.objects.filter(id__in=sender_ids)
+            smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
+
             num_senders = len(senders)
             num_smtp_servers = len(smtp_servers)
-            
+
             for i, recipient in enumerate(email_list):
                 recipient_email = recipient.get('Email')
                 context = {
@@ -406,38 +468,29 @@ class SendEmailsView(APIView):
                     'your_email': serializer.validated_data['your_email'],
                 }
 
-                # Remove extra quotes from the template path
-                template_path = template.template_path.strip('"')
 
                 try:
-                    with open(template_path, 'r') as file:
-                        template_content = file.read()
-                except IOError as e:
-                    logger.error(f"Error reading template file: {str(e)}")
-                    return Response({'error': 'Error reading the template file.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                try:
-                    template_instance = Template(template_content)
-                    html_content = template_instance.render(Context(context))
-                except TemplateDoesNotExist as e:
-                    logger.error(f"Template does not exist: {str(e)}")
-                    return Response({'error': 'Template does not exist.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    # Create a Django Template instance
+                    template = Template(file_content)
+                    context_data = Context(context)  # Use Django's Context
+                    email_content = template.render(context_data)
                 except Exception as e:
-                    logger.error(f"Error rendering template: {str(e)}")
-                    return Response({'error': 'Error rendering the template.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
+                    logger.error(f"Error formatting email content: {str(e)}")
+                    return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                  
+                # Get sender and SMTP server
                 sender = senders[i % num_senders]
                 smtp_server = smtp_servers[i % num_smtp_servers]
 
-                logger.info(f"Using SMTP server: {smtp_server.host} for email to {recipient_email}")
-
+                # Prepare and send email
                 email = EmailMessage(
-                    subject=subject, 
-                    body=html_content,
-                    from_email=f'{serializer.validated_data["display_name"]} <{sender.email}>',
+                    subject=subject,
+                    body=email_content,
+                    from_email=f'{serializer.validated_data["your_name"]} <{sender.email}>',
                     to=[recipient_email]
                 )
-                email.content_subtype = 'html'
+                email.content_subtype = 'html'  # Set the content as HTML
 
                 try:
                     connection = get_connection(
@@ -447,9 +500,7 @@ class SendEmailsView(APIView):
                         username=smtp_server.username,
                         password=smtp_server.password,
                         use_tls=smtp_server.use_tls,
-                        # use_ssl=smtp_server.use_ssl/
                     )
-                    
                     email.connection = connection
                     email.send()
                     status_message = 'Sent successfully'
@@ -459,7 +510,7 @@ class SendEmailsView(APIView):
                     failed_sends += 1
                     logger.error(f"Error sending email to {recipient_email}: {str(e)}")
 
-                timestamp = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+                timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
 
                 email_statuses.append({
                     'email': recipient_email,
@@ -481,3 +532,4 @@ class SendEmailsView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

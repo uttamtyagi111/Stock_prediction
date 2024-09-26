@@ -1,22 +1,22 @@
 from django.db import models
 from django.conf import settings
 
-class EmailTemplate(models.Model):
-    name = models.CharField(max_length=255) 
-    template_path = models.CharField(max_length=255)  
+
+
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class UploadedFile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Link to the user who uploaded the file
+    name = models.CharField(max_length=255)  # Store the file name
+    file_url = models.URLField(max_length=1024)  # Store the file URL (S3 URL)
+    uploaded_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return self.name
 
 
-class UserEditedTemplate(models.Model):
-    original_template = models.ForeignKey(EmailTemplate, on_delete=models.CASCADE, null=True, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  # Updated to use custom user model
-    name = models.CharField(max_length=255)
-    template_path = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.name
 
 
 class Sender(models.Model):
