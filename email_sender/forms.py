@@ -24,9 +24,9 @@ class EmailSendForm(forms.Form):
     # upload_file_key = forms.ModelChoiceField(queryset=upload_file_key.all())
     email_list = forms.FileField()
     subject = forms.CharField(max_length=255)
-    contact_info = forms.CharField(max_length=255)
-    website_url = forms.URLField()
+    # contact_info = forms.CharField(max_length=255)
+    # website_url = forms.URLField()
     your_name = forms.CharField(max_length=100)
-    your_company = forms.CharField(max_length=100)
-    your_email = forms.EmailField()
+    # your_company = forms.CharField(max_length=100)
+    # your_email = forms.EmailField()
     

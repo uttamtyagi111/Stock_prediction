@@ -19,9 +19,13 @@ EMAIL_TEMPLATES_DIR = BASE_DIR / 'templates'
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 
 
@@ -38,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
+    # 'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'authentication',
     'email_sender',
@@ -86,7 +90,34 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# Example settings
+
+# import os
+# from celery.schedules import crontab 
+
+
+# # Optionally, you can set the result backend if you need to store results
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# # Optional: Set timezone and enable UTC
+# CELERY_TIMEZONE = 'UTC'  # Change to your preferred timezone
+# CELERY_ENABLE_UTC = True
+
+# # Set the task track settings
+# CELERY_TASK_TRACK_STARTED = True  # Track when tasks are started
+# CELERY_TASK_TIME_LIMIT = 300  # Set a time limit for tasks in seconds
+
+
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_BEAT_SCHEDULE = {
+#     'delete-expired-blacklisted-tokens-every-day': {
+#         'task': 'email_automation.authentication.tasks.delete_expired_blacklisted_tokens_task',
+#         'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+#     },
+# }
+
+
 SESSION_COOKIE_AGE = 1209600  # Two weeks
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
@@ -146,14 +177,14 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')  
 
-# S3 storage settings for media files (HTML files)
+
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 AWS_DEFAULT_ACL = None
 
 AWS_QUERYSTRING_AUTH = False 
 
-# Set custom domain if required
+
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 AWS_S3_FILE_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/'
 

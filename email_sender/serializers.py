@@ -33,19 +33,34 @@ class EmailSendSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         write_only=True
     )
+    # your_name = serializers.CharField()
+    # your_company = serializers.CharField()
+    # your_email = serializers.EmailField()
+    # contact_info = serializers.CharField()
+    # website_url = serializers.URLField()
     display_name = serializers.CharField()
-    your_name = serializers.CharField()
-    your_company = serializers.CharField()
-    your_email = serializers.EmailField()
-    contact_info = serializers.CharField()
     subject = serializers.CharField(max_length=255) 
-    website_url = serializers.URLField()
     email_list = serializers.FileField()
     uploaded_file_key = serializers.CharField() 
     
     def validate_email_list(self, value):
         if not value.name.endswith('.csv'):
             raise serializers.ValidationError("Only CSV files are accepted.")
+        return value
+
+    # def validate(self, data):
+    #     if not data.get('sender_ids'):
+    #         raise serializers.ValidationError("At least one sender ID is required.")
+    #     if not data.get('smtp_server_ids'):
+    #         raise serializers.ValidationError("At least one SMTP server ID is required.")
+    #     return data
+    def validate_sender_ids(self, value):
+        if isinstance(value, str):
+            # Split the string by commas and convert to a list of integers
+            try:
+                value = list(map(int, value.split(',')))
+            except ValueError:
+                raise serializers.ValidationError("Invalid sender IDs format.")
         return value
 
     def validate(self, data):
