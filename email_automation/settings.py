@@ -23,17 +23,16 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 
-# SECURE_SSL_REDIRECT = True
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
 
 CSRF_TRUSTED_ORIGINS = [
     'https://django-api-aqlo.onrender.com',
+    'http://208.87.134.149',
+    
 ]
-import os
 
-# settings.py
-PORT = os.environ.get('PORT', '8000')
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/login/'
@@ -82,7 +81,6 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'email_automation.middleware.DisableCsrfMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -91,6 +89,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'https://wishgeeksdigital.com',
     
 ]
 
