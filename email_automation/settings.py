@@ -21,15 +21,16 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149']
 
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_SSL_REDIRECT = True
 
 CSRF_TRUSTED_ORIGINS = [
     'https://django-api-aqlo.onrender.com',
     'http://208.87.134.149',
+    'https://backend.wishgeeksdigital.com/',
     
 ]
 
