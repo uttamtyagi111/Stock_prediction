@@ -30,6 +30,10 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 CSRF_TRUSTED_ORIGINS = [
     'https://django-api-aqlo.onrender.com',
 ]
+import os
+
+# settings.py
+PORT = os.environ.get('PORT', '8000')
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/login/'
