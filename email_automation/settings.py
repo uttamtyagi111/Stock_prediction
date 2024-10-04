@@ -21,7 +21,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*']
 
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
