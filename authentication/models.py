@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 import uuid
-from phonenumber_field.modelfields import PhoneNumberField  # Import for phone number field
+
 
 class PasswordResetToken(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -17,10 +17,4 @@ class PasswordResetToken(models.Model):
     def __str__(self):
         return f"Reset token for {self.user.username}"
 
-# Extending the User model using a One-to-One relationship
-class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    phone_number = PhoneNumberField(null=False, blank=False, unique=True)
 
-    def __str__(self):
-        return f"{self.user.username}'s Profile"

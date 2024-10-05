@@ -3,24 +3,14 @@ from django.conf import settings
 from django.contrib.auth.models import User
 
 class UploadedFile(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Link to the user who uploaded the file
-    name = models.CharField(max_length=255)  # Store the file name
-    file_url = models.URLField(max_length=1024)  # Store the file URL (S3 URL)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  
+    name = models.CharField(max_length=255)  
+    file_url = models.URLField(max_length=1024)  
     uploaded_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return self.name
 
-
-
-
-class Sender(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    email = models.EmailField()
-
-    def __str__(self):
-        return self.name
 
 class SMTPServer(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

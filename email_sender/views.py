@@ -10,64 +10,16 @@ from io import StringIO
 from django.template import Template, Context
 import csv,time,logging,os,boto3,time,uuid
 from django.conf import settings
-from .serializers import EmailSendSerializer,  SenderSerializer,SMTPServerSerializer,UploadedFileSerializer
-from .models import  Sender, SMTPServer, UploadedFile
-from django.shortcuts import render, get_object_or_404
-from .forms import SenderForm, SMTPServerForm
+from .serializers import EmailSendSerializer,SMTPServerSerializer,UploadedFileSerializer
+from .models import   SMTPServer, UploadedFile
+from django.shortcuts import  get_object_or_404
+from .forms import  SMTPServerForm
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def senders_list(request):
-    request_user_id = request.data.get('user_id')
-    senders = Sender.objects.filter(user_id=request_user_id)
-    serializer = SenderSerializer(senders, many=True)
-    return Response({'senders': serializer.data})
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def sender_detail(request, pk):
-    sender = get_object_or_404(Sender, pk=pk, user=request.user)
-    serializer = SenderSerializer(sender)
-    return Response({'sender': serializer.data})
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_sender(request):
-    serializer = SenderSerializer(data=request.data)
-    if serializer.is_valid():
-        sender = serializer.save(user=request.user)
-        return Response({'message': 'Sender created successfully.', 'sender': SenderSerializer(sender).data}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def sender_edit(request, pk):
-    sender = get_object_or_404(Sender, pk=pk, user_id=request.user.id)
-    form = SenderForm(request.data, instance=sender)
-    
-    if form.is_valid():
-        sender = form.save(commit=False)
-        sender.user_id = request.user.id
-        sender.save()
-        return JsonResponse({'message': 'Sender updated successfully.', 'success': True, 'redirect': 'senders-list'}, status=200)
-    else:
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def sender_delete(request, pk):
-    sender = Sender.objects.filter(pk=pk, user_id=request.user.id).first()
-    if sender is None:
-        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-    sender.delete()
-    return Response({'meesage':'sender deleted successfully'},status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -196,81 +148,6 @@ class UploadHTMLToS3(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-# from django.core.files.base import ContentFile
-# import uuid
-# import boto3
-# import logging
-# from rest_framework.response import Response
-# from rest_framework.views import APIView
-# from rest_framework import status
-# from django.conf import settings
-# from .models import UploadedFile  # Import the UploadedFile model
-# from rest_framework.permissions import IsAuthenticated
-
-# logger = logging.getLogger(__name__)
-
-# class UploadHTMLToS3(APIView):
-#     permission_classes = [IsAuthenticated]  # Ensure the user is logged in
-    
-#     def post(self, request):
-#         logger.debug(f"FILES: {request.FILES}")
-#         logger.debug(f"DATA: {request.data}")
-
-#         html_content = None
-
-#         # Check if the file is provided in request.FILES (file upload)
-#         if 'file' in request.FILES:
-#             file = request.FILES['file']
-#             if not file.name.endswith('.html'):
-#                 return Response({'error': 'File must be an HTML file.'}, status=status.HTTP_400_BAD_REQUEST)
-#             html_content = file.read()  # Read the file as bytes
-        
-#         # Check if raw HTML content is provided
-#         elif 'html_content' in request.data:
-#             html_content = request.data.get('html_content')
-#             if not isinstance(html_content, str):
-#                 return Response({'error': 'HTML content must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
-#             html_content = html_content.encode('utf-8')  # Convert string to bytes
-        
-#         # If no valid content is provided
-#         if not html_content:
-#             return Response({'error': 'No HTML content provided.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         # Generate a unique filename for the HTML file
-#         file_name = f"{uuid.uuid4()}.html"
-
-#         # Connect to S3
-#         s3 = boto3.client(
-#             's3',
-#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-#             region_name=settings.AWS_S3_REGION_NAME
-#         )
-
-#         try:
-#             s3.put_object(
-#                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-#                 Key=file_name,
-#                 Body=html_content,
-#                 ContentType='text/html'
-#             )
-#         except Exception as e:
-#             logger.error(f"S3 upload failed: {str(e)}")
-#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#         file_url = f"{settings.AWS_S3_FILE_URL}{file_name}"
-
-#         uploaded_file = UploadedFile.objects.create(
-#             name=file_name,
-#             file_url=file_url,
-#             user=request.user  
-#         )
-
-#         return Response({
-#             'user_id': request.user.id,
-#             'name': uploaded_file.name,
-#             'file_url': uploaded_file.file_url
-#         }, status=status.HTTP_201_CREATED)
 
 
 
@@ -340,11 +217,6 @@ class UpdateUploadedFile(APIView):
 
         return Response({'file_name': new_file_name, 'file_url': uploaded_file.file_url}, status=status.HTTP_200_OK)
 
-
-
-class SenderViewSet(viewsets.ModelViewSet):
-    queryset = Sender.objects.all()
-    serializer_class = SenderSerializer
     
 
 
@@ -384,7 +256,6 @@ class SendEmailsView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = EmailSendSerializer(data=request.data)
         if serializer.is_valid():
-            sender_ids = serializer.validated_data['sender_ids']
             smtp_server_ids = serializer.validated_data['smtp_server_ids']
             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
             subject = serializer.validated_data.get('subject')
@@ -418,10 +289,7 @@ class SendEmailsView(APIView):
             failed_sends = 0
             email_statuses = []
 
-            senders = Sender.objects.filter(id__in=sender_ids)
             smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
-
-            num_senders = len(senders)
             num_smtp_servers = len(smtp_servers)
 
             for i, recipient in enumerate(email_list):
@@ -447,13 +315,12 @@ class SendEmailsView(APIView):
                     logger.error(f"Error formatting email content: {str(e)}")
                     return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                sender = senders[i % num_senders]
                 smtp_server = smtp_servers[i % num_smtp_servers]
 
                 email = EmailMessage(
                     subject=subject,
                     body=email_content,
-                    from_email=f'{serializer.validated_data["display_name"]} <{sender.email}>',
+                    from_email=f'{serializer.validated_data["display_name"]} <{smtp_server.username}>',
                     to=[recipient_email]
                 )
                 email.content_subtype = 'html'
@@ -482,7 +349,7 @@ class SendEmailsView(APIView):
                     'email': recipient_email,
                     'status': status_message,
                     'timestamp': timestamp,
-                    'sender': sender.email,
+                    'from_email':smtp_server.username,
                     'smtp_server': smtp_server.host,
                 })
 

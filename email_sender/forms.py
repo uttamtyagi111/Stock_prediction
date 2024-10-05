@@ -1,11 +1,5 @@
 from django import forms
-from .models import Sender, SMTPServer
-
-
-class SenderForm(forms.ModelForm):
-    class Meta:
-        model = Sender
-        fields = ['email','name']
+from .models import  SMTPServer
 
 
 class SMTPServerForm(forms.ModelForm):
@@ -14,12 +8,8 @@ class SMTPServerForm(forms.ModelForm):
         fields = ['name', 'host', 'port', 'username', 'password', 'use_tls']
         
 
-
-
-
-
 class EmailSendForm(forms.Form):
-    sender_ids = forms.ModelMultipleChoiceField(queryset=Sender.objects.all(), widget=forms.CheckboxSelectMultiple)
+    # sender_ids = forms.ModelMultipleChoiceField(queryset=Sender.objects.all(), widget=forms.CheckboxSelectMultiple)
     smtp_server_ids = forms.ModelMultipleChoiceField(queryset=SMTPServer.objects.all(), widget=forms.CheckboxSelectMultiple)
     # upload_file_key = forms.ModelChoiceField(queryset=upload_file_key.all())
     email_list = forms.FileField()

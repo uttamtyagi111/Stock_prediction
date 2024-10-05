@@ -1,7 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SenderViewSet, SendEmailsView,UploadedFileList,UpdateUploadedFile
-from .views import sender_edit, senders_list,sender_detail,sender_delete
+from .views import  SendEmailsView,UploadedFileList,UpdateUploadedFile
 from . import views
 from .views import UploadHTMLToS3
 
@@ -11,11 +10,6 @@ router = DefaultRouter()
 urlpatterns = [
     path('', include(router.urls)),
     path('send-emails/', SendEmailsView.as_view(), name='send-emails'),
-    path('senders/', views.senders_list, name='senders-list'),
-    path('senders/<int:pk>/', sender_detail, name='sender_detail'),
-    path('sender/create/', views.create_sender, name='create-sender'),
-    path('senders/edit/<int:pk>/', sender_edit, name='sender-edit'),
-    path('senders/delete/<int:pk>/', sender_delete, name='sender-delete'),
     path('smtp-servers/', views.smtp_servers_list, name='smtp-servers-list'),
     path('smtp-servers/<int:pk>/', views.smtp_server_detail, name='smtp-server-detail'),
     path('smtp-server/create/', views.smtp_server_create, name='smtp-server-create'),

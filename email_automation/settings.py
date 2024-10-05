@@ -35,9 +35,9 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/login/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = '/admin/'
+LOGIN_REDIRECT_URL = '/admin/'
+LOGOUT_REDIRECT_URL = '/admin/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -96,34 +96,6 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-
-
-# import os
-# from celery.schedules import crontab 
-
-
-# # Optionally, you can set the result backend if you need to store results
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-
-# # Optional: Set timezone and enable UTC
-# CELERY_TIMEZONE = 'UTC'  # Change to your preferred timezone
-# CELERY_ENABLE_UTC = True
-
-# # Set the task track settings
-# CELERY_TASK_TRACK_STARTED = True  # Track when tasks are started
-# CELERY_TASK_TIME_LIMIT = 300  # Set a time limit for tasks in seconds
-
-
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_BEAT_SCHEDULE = {
-#     'delete-expired-blacklisted-tokens-every-day': {
-#         'task': 'email_automation.authentication.tasks.delete_expired_blacklisted_tokens_task',
-#         'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
-#     },
-# }
-
 
 SESSION_COOKIE_AGE = 1209600  # Two weeks
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
