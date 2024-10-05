@@ -9,6 +9,10 @@ import boto3
 load_dotenv()
 
 
+BASE_URL = os.getenv('BASE_URL')
+
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Directory settings for email templates
@@ -35,9 +39,9 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
-LOGIN_URL = '/admin/'
-LOGIN_REDIRECT_URL = '/admin/'
-LOGOUT_REDIRECT_URL = '/admin/'
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/login/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -8,10 +8,12 @@ class UploadedFileSerializer(serializers.ModelSerializer):
        
 
 
+
 class SMTPServerSerializer(serializers.ModelSerializer):
     class Meta:
         model = SMTPServer
         fields = ['id', 'name', 'host', 'port', 'username', 'password', 'use_tls']
+
 
         
 

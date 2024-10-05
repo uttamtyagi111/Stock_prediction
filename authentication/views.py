@@ -198,6 +198,15 @@ def user_list(request):
     users = User.objects.all()
     return render(request, 'authentication/user_list.html', {'users': users})
 
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BASE_URL = os.getenv('BASE_URL')
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def request_password_reset(request):
@@ -210,7 +219,7 @@ def request_password_reset(request):
         if user:
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            reset_link = f"http://localhost:3000/reset_password/{uidb64}/{token}/"
+            reset_link = f"{BASE_URL}/reset_password/{uidb64}/{token}/"
             send_mail(
                 'Password Reset Request',
                 f'Click the link to reset your password: {reset_link}',

@@ -20,8 +20,6 @@ from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def smtp_servers_list(request):
@@ -146,9 +144,6 @@ class UploadHTMLToS3(APIView):
             'file_url': uploaded_file.file_url,
             'file_key': file_name  
         }, status=status.HTTP_201_CREATED)
-
-
-
 
 
 
@@ -295,8 +290,8 @@ class SendEmailsView(APIView):
             for i, recipient in enumerate(email_list):
                 recipient_email = recipient.get('Email')
                 context = {
-                    'recipient_firstName': recipient.get('firstName'),
-                    'recipient_lastName': recipient.get('lastName'),
+                    'firstName': recipient.get('firstName'),
+                    'lastName': recipient.get('lastName'),
                     'recipient_company': recipient.get('company'),
                     # 'contact_info': serializer.validated_data['contact_info'],
                     # 'website_url': serializer.validated_data['website_url'],
