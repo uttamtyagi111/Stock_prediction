@@ -4,7 +4,8 @@ import os
 from dotenv import load_dotenv
 import ssl
 from django.core.mail import  EmailMessage
-import boto3 
+import boto3
+from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -130,17 +131,33 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'email_automation.wsgi.application'
 
-
+import os
+from urllib.parse import urlparse
+# Load the database URL from the environment variable
+DATABASE_URL = os.environ.get('DATABASE_URL')
+# Parse the URL
+url = urlparse(DATABASE_URL)
+# Configure the DATABASES setting
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),        
-        'USER': os.getenv('DB_USER'),        
-        'PASSWORD': os.getenv('DB_PASSWORD'), 
-        'HOST': os.getenv('DB_HOST'),        
-        'PORT': os.getenv('DB_PORT'),        
+        'NAME': url.path[1:],  # Remove the leading slash
+        'USER': url.username,
+        'PASSWORD': url.password,
+        'HOST': url.hostname,
+        'PORT': url.port,
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('DB_NAME'),        
+#         'USER': os.getenv('DB_USER'),        
+#         'PASSWORD': os.getenv('DB_PASSWORD'), 
+#         'HOST': os.getenv('DB_HOST'),        
+#         'PORT': os.getenv('DB_PORT'),        
+#     }
+# }
 
 
 # DATABASES = {
