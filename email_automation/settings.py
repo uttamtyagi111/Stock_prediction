@@ -12,10 +12,9 @@ load_dotenv()
 BASE_URL = os.getenv('BASE_URL')
 
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Directory settings for email templates
+
 ORIGINAL_TEMPLATES_DIR = BASE_DIR / 'original_email_templates'
 EDITED_TEMPLATES_DIR = BASE_DIR / 'edited_email_templates'
 
@@ -34,8 +33,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*']
 CSRF_TRUSTED_ORIGINS = [
     'https://django-api-aqlo.onrender.com',
     'http://208.87.134.149',
-    'https://backend.wishgeeksdigital.com/',
-    
+    'https://backend.wishgeeksdigital.com/',   
 ]
 
 
@@ -81,6 +79,7 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -91,13 +90,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'https://wishgeeksdigital.com',
-    'https://email-automation-mocha.vercel.app/',
-    
+    'https://email-automation-mocha.vercel.app',   
 ]
+
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -123,6 +124,7 @@ TEMPLATES = [
         },
     },
 ]
+
 
 WSGI_APPLICATION = 'email_automation.wsgi.application'
 
@@ -202,7 +204,6 @@ class SSLDisableContext:
 
     def __exit__(self, exc_type, exc_value, traceback):
         EmailMessage.get_connection = staticmethod(self.original_get_connection)
-
 SSLDisableContext()
 
 LOGGING = {
