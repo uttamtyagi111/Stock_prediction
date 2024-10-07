@@ -106,6 +106,8 @@ CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_AGE = 1209600  # Two weeks
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
+# PASSWORD_RESET_TIMEOUT = 3600  #1 hr
+
 
 ROOT_URLCONF = 'email_automation.urls'
 
@@ -128,12 +130,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'email_automation.wsgi.application'
 
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    },
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),        
+        'USER': os.getenv('DB_USER'),        
+        'PASSWORD': os.getenv('DB_PASSWORD'), 
+        'HOST': os.getenv('DB_HOST'),        
+        'PORT': os.getenv('DB_PORT'),        
+    }
 }
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     },
+# }
 
 DATABASE_ROUTERS = ['authentication.database_router.DatabaseRouter']
 
