@@ -362,6 +362,164 @@ class SendEmailsView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
+# import asyncio
+# import csv
+# from io import StringIO
+# import logging
+# import boto3
+# from django.utils import timezone
+# from django.core.mail import EmailMessage, get_connection
+# from django.conf import settings
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status
+# from django.template import Context, Template
+# from asgiref.sync import sync_to_async  # Wrap sync operations
+# from .serializers import EmailSendSerializer
+# from .models import SMTPServer
+
+# logger = logging.getLogger(__name__)
+
+# class SendEmailsView(APIView):
+
+#     async def send_email_async(self, recipient_email, subject, email_content, smtp_server):
+#         """Send an email asynchronously."""
+#         email = EmailMessage(
+#             subject=subject,
+#             body=email_content,
+#             from_email=f'{smtp_server.username}',
+#             to=[recipient_email],
+#         )
+#         email.content_subtype = 'html'
+        
+#         try:
+#             # Wrap email sending in a thread since it's synchronous
+#             connection = get_connection(
+#                 backend='django.core.mail.backends.smtp.EmailBackend',
+#                 host=smtp_server.host,
+#                 port=smtp_server.port,
+#                 username=smtp_server.username,
+#                 password=smtp_server.password,
+#                 use_tls=smtp_server.use_tls,
+#             )
+#             email.connection = connection
+#             await asyncio.to_thread(email.send)
+#             return 'Sent successfully'
+#         except Exception as e:
+#             logger.error(f"Error sending email to {recipient_email}: {str(e)}")
+#             return f'Failed to send: {str(e)}'
+
+#     async def get_html_content_from_s3(self, uploaded_file_key):
+#         """Fetch HTML content from S3 asynchronously."""
+#         try:
+#             s3 = boto3.client(
+#                 's3',
+#                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+#                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+#                 region_name=settings.AWS_S3_REGION_NAME
+#             )
+#             # Wrap S3 object fetching in a thread since it's blocking I/O
+#             s3_object = await asyncio.to_thread(s3.get_object, Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=uploaded_file_key)
+#             return s3_object['Body'].read().decode('utf-8')
+#         except Exception as e:
+#             logger.error(f"Error fetching file from S3: {str(e)}")
+#             raise
+
+#     async def post(self, request, *args, **kwargs):
+#         """Handle the POST request to send emails."""
+#         serializer = EmailSendSerializer(data=request.data)
+#         if serializer.is_valid():
+#             smtp_server_ids = serializer.validated_data['smtp_server_ids']
+#             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
+#             subject = serializer.validated_data.get('subject')
+#             uploaded_file_key = serializer.validated_data['uploaded_file_key']
+
+#             # Get the HTML content from S3 asynchronously
+#             try:
+#                 file_content = await self.get_html_content_from_s3(uploaded_file_key)
+#             except Exception as e:
+#                 return Response({'error': f'Error fetching file from S3: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#             # Handle email list CSV file asynchronously
+#             email_list_file = request.FILES.get('email_list')
+#             if not email_list_file:
+#                 return Response({'error': 'No email list file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+#             email_list = []
+#             try:
+#                 # Async file read
+#                 csv_file = await asyncio.to_thread(email_list_file.read)
+#                 csv_file = csv_file.decode('utf-8')
+#                 csv_reader = csv.DictReader(StringIO(csv_file))
+#                 for row in csv_reader:
+#                     email_list.append(row)
+#             except Exception as e:
+#                 logger.error(f"Error processing email list: {str(e)}")
+#                 return Response({'error': 'Error processing the email list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+#             total_emails = len(email_list)
+#             successful_sends = 0
+#             failed_sends = 0
+#             email_statuses = []
+
+#             # Fetch SMTP servers asynchronously
+#             smtp_servers = await sync_to_async(list)(SMTPServer.objects.filter(id__in=smtp_server_ids))
+#             num_smtp_servers = len(smtp_servers)
+
+#             for i, recipient in enumerate(email_list):
+#                 recipient_email = recipient.get('Email')
+#                 context = {
+#                     'firstName': recipient.get('firstName'),
+#                     'lastName': recipient.get('lastName'),
+#                     'recipient_company': recipient.get('company'),
+#                     'display_name': serializer.validated_data['display_name'],
+#                 }
+
+#                 # Render the email content asynchronously
+#                 try:
+#                     template = Template(file_content)
+#                     context_data = Context(context)
+#                     email_content = await asyncio.to_thread(template.render, context_data)
+#                 except Exception as e:
+#                     logger.error(f"Error formatting email content: {str(e)}")
+#                     return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#                 # Cycle through the SMTP servers
+#                 smtp_server = smtp_servers[i % num_smtp_servers]
+
+#                 # Send the email asynchronously
+#                 status_message = await self.send_email_async(recipient_email, subject, email_content, smtp_server)
+
+#                 if "Sent successfully" in status_message:
+#                     successful_sends += 1
+#                 else:
+#                     failed_sends += 1
+
+#                 timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+
+#                 # Append email sending status
+#                 email_statuses.append({
+#                     'email': recipient_email,
+#                     'status': status_message,
+#                     'timestamp': timestamp,
+#                     'from_email': smtp_server.username,
+#                     'smtp_server': smtp_server.host,
+#                 })
+
+#                 # Add a delay between sending each email if specified
+#                 if delay_seconds > 0:
+#                     await asyncio.sleep(delay_seconds)
+
+#             return Response({
+#                 'status': 'All emails processed',
+#                 'total_emails': total_emails,
+#                 'successful_sends': successful_sends,
+#                 'failed_sends': failed_sends,
+#                 'email_statuses': email_statuses
+#             }, status=status.HTTP_200_OK)
+
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
     
     

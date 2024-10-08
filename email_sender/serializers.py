@@ -29,6 +29,7 @@ class EmailSendSerializer(serializers.Serializer):
     # website_url = serializers.URLField()
     display_name = serializers.CharField()
     subject = serializers.CharField(max_length=255) 
+    delay_seconds = serializers.IntegerField(required=False, default=0) 
     email_list = serializers.FileField()
     uploaded_file_key = serializers.CharField() 
     
