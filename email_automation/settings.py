@@ -131,23 +131,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'email_automation.wsgi.application'
 
-import os
-from urllib.parse import urlparse
-# Load the database URL from the environment variable
-DATABASE_URL = os.environ.get('DATABASE_URL')
-# Parse the URL
-url = urlparse(DATABASE_URL)
-# Configure the DATABASES setting
+
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': "email_automation",
-        'USER': "email_automation_user",
-        'PASSWORD': "XWLtajp9NVZHZTJ8oLzxxXjR1ZDxjAMz",
-        'HOST': "dpg-cs26ubbqf0us73a2j9gg-a",
-        'PORT': 5432,
-    }
+    'default': {}
 }
+
+database_url = os.environ.get("DATABASE_URL")
+DATABASES["default"] = dj_database_url.parse(database_url)
+
+# import os
+# from urllib.parse import urlparse
+
+# DATABASE_URL = os.environ.get('DATABASE_URL')
+# url = urlparse(DATABASE_URL)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'email_automation',
+#         'USER': 'email_automation_user',
+#         'PASSWORD': 'XWLtajp9NVZHZTJ8oLzxxXjR1ZDxjAMz',
+#         'HOST': 'dpg-cs26ubbqf0us73a2j9gg-a',
+#         'PORT': 5432,
+#     }
+# }
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
