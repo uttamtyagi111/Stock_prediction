@@ -141,11 +141,11 @@ url = urlparse(DATABASE_URL)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': url.path[1:],  # Remove the leading slash
-        'USER': url.username,
-        'PASSWORD': url.password,
-        'HOST': url.hostname,
-        'PORT': url.port,
+        'NAME': "email_automation",
+        'USER': "email_automation_user",
+        'PASSWORD': "XWLtajp9NVZHZTJ8oLzxxXjR1ZDxjAMz",
+        'HOST': "dpg-cs26ubbqf0us73a2j9gg-a",
+        'PORT': 5432,
     }
 }
 # DATABASES = {
