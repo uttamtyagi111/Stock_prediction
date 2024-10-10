@@ -292,7 +292,7 @@ class SendEmailsView(APIView):
                 context = {
                     'firstName': recipient.get('firstName'),
                     'lastName': recipient.get('lastName'),
-                    'recipient_company': recipient.get('company'),
+                    'companyName': recipient.get('companyName'),
                     # 'contact_info': serializer.validated_data['contact_info'],
                     # 'website_url': serializer.validated_data['website_url'],
                     'display_name': serializer.validated_data['display_name'],
