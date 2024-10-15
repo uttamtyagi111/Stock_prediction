@@ -38,74 +38,46 @@
 #             'timestamp': timestamp
 #         }))
 from channels.generic.websocket import AsyncWebsocketConsumer
-from rest_framework_simplejwt.tokens import UntypedToken
 from channels.db import database_sync_to_async
-from jwt.exceptions import InvalidTokenError
-from django.contrib.auth import get_user_model
 import json
-
-User = get_user_model()
 
 class EmailStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Extract the token from the query string
-        token = self.scope['query_string'].decode('utf-8').split('=')[1]
+        # Get the authenticated user's ID or email
+        user = self.scope["user"]
 
-        try:
-            # Validate the JWT token and retrieve the user
-            user = await self.get_user_from_token(token)
+        if user.is_authenticated:
+            # Create a group name for this specific user
+            self.group_name = f'user_{user.id}'  # or user.username, email, etc.
 
-            if user:
-                # Create a user-specific group based on user ID
-                self.group_name = f'user_{user.id}'
+            # Add this WebSocket connection to the user's group
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
 
-                # Add this WebSocket connection to the user's group
-                await self.channel_layer.group_add(
-                    self.group_name,
-                    self.channel_name
-                )
+            # Accept the WebSocket connection
+            await self.accept()
 
-                # Accept the WebSocket connection
-                await self.accept()
-            else:
-                # If user is not authenticated, close the connection
-                await self.close()
-
-        except InvalidTokenError:
-            # Invalid token, close the connection
+        else:
+            # If the user is not authenticated, reject the connection
             await self.close()
 
     async def disconnect(self, close_code):
-        # Remove the WebSocket connection from the user's group when it disconnects
+        # Leave the user-specific group when the WebSocket disconnects
         await self.channel_layer.group_discard(
             self.group_name,
             self.channel_name
         )
 
     async def send_status_update(self, event):
-        # Receive the message from the group and send it to the WebSocket client
         status = event['status']
         email = event['email']
         timestamp = event['timestamp']
 
+        # Send the message to the WebSocket
         await self.send(text_data=json.dumps({
             'email': email,
             'status': status,
             'timestamp': timestamp
         }))
-
-    @database_sync_to_async
-    def get_user_from_token(self, token):
-        """
-        This method decodes the JWT token and retrieves the user.
-        """
-        try:
-            # Validate the token and extract the payload
-            validated_token = UntypedToken(token)
-            user_id = validated_token.get('user_id')
-
-            # Fetch the user from the database
-            return User.objects.get(id=user_id)
-        except (InvalidTokenError, User.DoesNotExist):
-            return None
-
