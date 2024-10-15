@@ -229,6 +229,9 @@ class FileUploadView(APIView):
 
 
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 class SendEmailsView(APIView):
     
     def get_html_content_from_s3(self, uploaded_file_key):
@@ -284,6 +287,8 @@ class SendEmailsView(APIView):
             failed_sends = 0
             email_statuses = []
 
+            channel_layer = get_channel_layer()
+            
             smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
             num_smtp_servers = len(smtp_servers)
 
@@ -308,6 +313,15 @@ class SendEmailsView(APIView):
                     email_content = template.render(context_data)
                 except Exception as e:
                     logger.error(f"Error formatting email content: {str(e)}")
+                    async_to_sync(channel_layer.group_send)(
+                        'email_status_updates',
+                        {
+                            'type': 'send_status_update',
+                            'email': recipient_email,
+                            'status': f'Error formatting email content: {str(e)}',
+                            'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        }
+                    )
                     return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 smtp_server = smtp_servers[i % num_smtp_servers]
@@ -347,6 +361,17 @@ class SendEmailsView(APIView):
                     'from_email':smtp_server.username,
                     'smtp_server': smtp_server.host,
                 })
+                
+                async_to_sync(channel_layer.group_send)(
+                    'email_status_updates',
+                    {
+                        'type': 'send_status_update',
+                        'email': recipient_email,
+                        'status': status_message,
+                        'timestamp': timestamp,
+                    }
+                )
+
 
                 if delay_seconds > 0:
                     time.sleep(delay_seconds)

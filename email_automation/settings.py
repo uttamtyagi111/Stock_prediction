@@ -129,8 +129,10 @@ TEMPLATES = [
 ]
 
 
-WSGI_APPLICATION = 'email_automation.wsgi.application'
+# WSGI_APPLICATION = 'email_automation.wsgi.application'
 
+
+ASGI_APPLICATION = 'email_automation.asgi.application'
 
 import dj_database_url
 DATABASES = {
