@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'authentication',
     'email_sender',
-    'storages', 
+    'storages',
+    'channels', 
 ]
 
 REST_FRAMEWORK = {
@@ -87,7 +88,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
-    'channels.middleware.WebSocketMiddleware',
+    # 'channels.middleware.WebSocketMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
