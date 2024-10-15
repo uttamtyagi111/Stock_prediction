@@ -248,9 +248,6 @@ class SendEmailsView(APIView):
         except Exception as e:
             logger.error(f"Error fetching file from S3: {str(e)}")
             raise
-    
-    
-    
     def post(self, request, *args, **kwargs):
         serializer = EmailSendSerializer(data=request.data)
         if serializer.is_valid():
@@ -258,7 +255,9 @@ class SendEmailsView(APIView):
             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
             subject = serializer.validated_data.get('subject')
             uploaded_file_key = serializer.validated_data['uploaded_file_key'] 
-
+            
+            # Get the logged-in user's ID
+            user_id = request.user.id
 
             # Get the HTML content from S3
             try:
@@ -266,8 +265,7 @@ class SendEmailsView(APIView):
             except Exception as e:
                 return Response({'error': f'Error fetching file from S3: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-
-            # Email list CSV file handling
+            # Email list CSV file handling (unchanged)
             email_list_file = request.FILES.get('email_list')
             if not email_list_file:
                 return Response({'error': 'No email list file provided.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -287,6 +285,7 @@ class SendEmailsView(APIView):
             failed_sends = 0
             email_statuses = []
 
+            # Get the channel layer for WebSocket communication
             channel_layer = get_channel_layer()
             
             smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
@@ -298,14 +297,8 @@ class SendEmailsView(APIView):
                     'firstName': recipient.get('firstName'),
                     'lastName': recipient.get('lastName'),
                     'companyName': recipient.get('companyName'),
-                    # 'contact_info': serializer.validated_data['contact_info'],
-                    # 'website_url': serializer.validated_data['website_url'],
                     'display_name': serializer.validated_data['display_name'],
-                    # 'your_name': serializer.validated_data['your_name'],
-                    # 'your_company': serializer.validated_data['your_company'],
-                    # 'your_email': serializer.validated_data['your_email'],
                 }
-
 
                 try:
                     template = Template(file_content)
@@ -314,7 +307,7 @@ class SendEmailsView(APIView):
                 except Exception as e:
                     logger.error(f"Error formatting email content: {str(e)}")
                     async_to_sync(channel_layer.group_send)(
-                        'email_status_updates',
+                        f"user_{user_id}",  # Send the message to the specific user's WebSocket group
                         {
                             'type': 'send_status_update',
                             'email': recipient_email,
@@ -358,12 +351,13 @@ class SendEmailsView(APIView):
                     'email': recipient_email,
                     'status': status_message,
                     'timestamp': timestamp,
-                    'from_email':smtp_server.username,
+                    'from_email': smtp_server.username,
                     'smtp_server': smtp_server.host,
                 })
-                
+
+                # Send the status update to the logged-in user's WebSocket group
                 async_to_sync(channel_layer.group_send)(
-                    'email_status_updates',
+                    f"user_{user_id}",  # Send to specific user's group
                     {
                         'type': 'send_status_update',
                         'email': recipient_email,
@@ -371,7 +365,6 @@ class SendEmailsView(APIView):
                         'timestamp': timestamp,
                     }
                 )
-
 
                 if delay_seconds > 0:
                     time.sleep(delay_seconds)
@@ -385,6 +378,142 @@ class SendEmailsView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    # def post(self, request, *args, **kwargs):
+    #     serializer = EmailSendSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         smtp_server_ids = serializer.validated_data['smtp_server_ids']
+    #         delay_seconds = serializer.validated_data.get('delay_seconds', 0)
+    #         subject = serializer.validated_data.get('subject')
+    #         uploaded_file_key = serializer.validated_data['uploaded_file_key'] 
+
+
+    #         # Get the HTML content from S3
+    #         try:
+    #             file_content = self.get_html_content_from_s3(uploaded_file_key)
+    #         except Exception as e:
+    #             return Response({'error': f'Error fetching file from S3: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+    #         # Email list CSV file handling
+    #         email_list_file = request.FILES.get('email_list')
+    #         if not email_list_file:
+    #             return Response({'error': 'No email list file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    #         email_list = []
+    #         try:
+    #             csv_file = email_list_file.read().decode('utf-8')
+    #             csv_reader = csv.DictReader(StringIO(csv_file))
+    #             for row in csv_reader:
+    #                 email_list.append(row)
+    #         except Exception as e:
+    #             logger.error(f"Error processing email list: {str(e)}")
+    #             return Response({'error': 'Error processing the email list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    #         total_emails = len(email_list)
+    #         successful_sends = 0
+    #         failed_sends = 0
+    #         email_statuses = []
+
+    #         channel_layer = get_channel_layer()
+            
+    #         smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
+    #         num_smtp_servers = len(smtp_servers)
+
+    #         for i, recipient in enumerate(email_list):
+    #             recipient_email = recipient.get('Email')
+    #             context = {
+    #                 'firstName': recipient.get('firstName'),
+    #                 'lastName': recipient.get('lastName'),
+    #                 'companyName': recipient.get('companyName'),
+    #                 # 'contact_info': serializer.validated_data['contact_info'],
+    #                 # 'website_url': serializer.validated_data['website_url'],
+    #                 'display_name': serializer.validated_data['display_name'],
+    #                 # 'your_name': serializer.validated_data['your_name'],
+    #                 # 'your_company': serializer.validated_data['your_company'],
+    #                 # 'your_email': serializer.validated_data['your_email'],
+    #             }
+
+
+    #             try:
+    #                 template = Template(file_content)
+    #                 context_data = Context(context)  
+    #                 email_content = template.render(context_data)
+    #             except Exception as e:
+    #                 logger.error(f"Error formatting email content: {str(e)}")
+    #                 async_to_sync(channel_layer.group_send)(
+    #                     'email_status_updates',
+    #                     {
+    #                         'type': 'send_status_update',
+    #                         'email': recipient_email,
+    #                         'status': f'Error formatting email content: {str(e)}',
+    #                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+    #                     }
+    #                 )
+    #                 return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    #             smtp_server = smtp_servers[i % num_smtp_servers]
+
+    #             email = EmailMessage(
+    #                 subject=subject,
+    #                 body=email_content,
+    #                 from_email=f'{serializer.validated_data["display_name"]} <{smtp_server.username}>',
+    #                 to=[recipient_email]
+    #             )
+    #             email.content_subtype = 'html'
+
+    #             try:
+    #                 connection = get_connection(
+    #                     backend='django.core.mail.backends.smtp.EmailBackend',
+    #                     host=smtp_server.host,
+    #                     port=smtp_server.port,
+    #                     username=smtp_server.username,
+    #                     password=smtp_server.password,
+    #                     use_tls=smtp_server.use_tls,
+    #                 )
+    #                 email.connection = connection
+    #                 email.send()
+    #                 status_message = 'Sent successfully'
+    #                 successful_sends += 1
+    #             except Exception as e:
+    #                 status_message = f'Failed to send: {str(e)}'
+    #                 failed_sends += 1
+    #                 logger.error(f"Error sending email to {recipient_email}: {str(e)}")
+
+    #             timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    #             email_statuses.append({
+    #                 'email': recipient_email,
+    #                 'status': status_message,
+    #                 'timestamp': timestamp,
+    #                 'from_email':smtp_server.username,
+    #                 'smtp_server': smtp_server.host,
+    #             })
+                
+    #             async_to_sync(channel_layer.group_send)(
+    #                 'email_status_updates',
+    #                 {
+    #                     'type': 'send_status_update',
+    #                     'email': recipient_email,
+    #                     'status': status_message,
+    #                     'timestamp': timestamp,
+    #                 }
+    #             )
+
+
+    #             if delay_seconds > 0:
+    #                 time.sleep(delay_seconds)
+
+    #         return Response({
+    #             'status': 'All emails processed',
+    #             'total_emails': total_emails,
+    #             'successful_sends': successful_sends,
+    #             'failed_sends': failed_sends,
+    #             'email_statuses': email_statuses
+    #         }, status=status.HTTP_200_OK)
+
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
 # import asyncio
