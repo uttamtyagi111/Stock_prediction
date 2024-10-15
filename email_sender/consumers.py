@@ -43,12 +43,13 @@ import json
 
 class EmailStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Get the authenticated user's ID or email
         user = self.scope["user"]
+        # Initialize group_name to prevent AttributeError
+        self.group_name = None  
+        print(f"User authenticated: {user.is_authenticated}")
 
         if user.is_authenticated:
-            # Create a group name for this specific user
-            self.group_name = f'user_{user.id}'  # or user.username, email, etc.
+            self.group_name = f'user_{user.id}'  
 
             # Add this WebSocket connection to the user's group
             await self.channel_layer.group_add(
@@ -60,15 +61,16 @@ class EmailStatusConsumer(AsyncWebsocketConsumer):
             await self.accept()
 
         else:
-            # If the user is not authenticated, reject the connection
+            print("User is not authenticated, closing connection.")
             await self.close()
 
     async def disconnect(self, close_code):
-        # Leave the user-specific group when the WebSocket disconnects
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        if self.group_name:  # Check if group_name is set
+            # Leave the user-specific group when the WebSocket disconnects
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
 
     async def send_status_update(self, event):
         status = event['status']

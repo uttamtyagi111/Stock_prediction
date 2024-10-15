@@ -1,6 +1,6 @@
 from django.urls import re_path
-from . import consumers
+from .consumers import EmailStatusConsumer
 
 websocket_urlpatterns = [
-    re_path(r'ws/email-status/(?P<user_id>\d+)/$', consumers.EmailStatusConsumer.as_asgi()),
+    re_path(r'ws/email-status/', EmailStatusConsumer.as_asgi()),  # Define the WebSocket route
 ]
