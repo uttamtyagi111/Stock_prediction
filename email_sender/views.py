@@ -307,7 +307,7 @@ class SendEmailsView(APIView):
                 except Exception as e:
                     logger.error(f"Error formatting email content: {str(e)}")
                     async_to_sync(channel_layer.group_send)(
-                        f"user_{user_id}",  # Send the message to the specific user's WebSocket group
+                        'email_status_updates',  # Send the message to the specific user's WebSocket group
                         {
                             'type': 'send_status_update',
                             'email': recipient_email,
@@ -357,7 +357,7 @@ class SendEmailsView(APIView):
 
                 # Send the status update to the logged-in user's WebSocket group
                 async_to_sync(channel_layer.group_send)(
-                    f"user_{user_id}",  # Send to specific user's group
+                    'email_status_updates',  # Send to specific user's group
                     {
                         'type': 'send_status_update',
                         'email': recipient_email,
