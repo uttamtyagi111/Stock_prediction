@@ -15,7 +15,7 @@ class SMTPServerAdmin(admin.ModelAdmin):
 
 @admin.register(EmailStatusLog)
 class EmailStatusLogAdmin(admin.ModelAdmin):
-    list_display = ('email', 'status', 'timestamp', 'user', 'from_email', 'smtp_server')  # Customize fields to display
+    list_display = ('id','email', 'status', 'timestamp', 'user', 'from_email', 'smtp_server')  # Customize fields to display
     list_filter = ('status', 'user', 'smtp_server')  # Add filters for better searchability
     search_fields = ('email', 'status', 'from_email')  # Add a search box for filtering logs
 
