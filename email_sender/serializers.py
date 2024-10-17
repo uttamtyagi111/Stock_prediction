@@ -1,11 +1,16 @@
 from rest_framework import serializers
-from .models import  SMTPServer,UploadedFile
+from .models import  SMTPServer,UploadedFile,EmailStatusLog
         
 class UploadedFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedFile
         fields = ['id', 'user_id', 'name', 'file_url']  
-       
+
+
+class EmailStatusLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailStatusLog
+        fields = ['id','user', 'email', 'status', 'timestamp', 'from_email', 'smtp_server']
 
 
 

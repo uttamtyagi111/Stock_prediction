@@ -11,8 +11,16 @@ class UploadedFile(models.Model):
     def __str__(self):
         return self.name
 
+class EmailStatusLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    email = models.EmailField()
+    status = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    from_email = models.EmailField()
+    smtp_server = models.CharField(max_length=255)
 
-
+    def __str__(self):
+        return f"{self.email} - {self.status} - {self.timestamp}"
 
 
 class SMTPServer(models.Model):
