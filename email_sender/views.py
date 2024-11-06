@@ -377,7 +377,7 @@ class SendEmailsView(APIView):
                 )
 
                 if delay_seconds > 0:
-                    time.sleep(delay_seconds)
+                    time.sleep(delay_seconds) 
 
             return Response({
                 'status': 'All emails processed',
