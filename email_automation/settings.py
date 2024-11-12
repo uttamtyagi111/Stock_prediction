@@ -56,7 +56,8 @@ INSTALLED_APPS = [
     'authentication',
     'email_sender',
     'storages',
-    'channels', 
+    'channels',
+    'subscriptions', 
 ]
 
 REST_FRAMEWORK = {
@@ -67,6 +68,18 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
+import environ
+import os
+
+# Initialize environment
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))  # Load .env file
+
+# Set Razorpay credentials
+RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID')
+RAZORPAY_SECRET_KEY = env('RAZORPAY_SECRET_KEY')
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=2),
