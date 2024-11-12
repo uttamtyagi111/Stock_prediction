@@ -69,16 +69,16 @@ REST_FRAMEWORK = {
     ),
 }
 
-import environ
-import os
+# import environ
+# import os
 
-# Initialize environment
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))  # Load .env file
+# # Initialize environment
+# env = environ.Env()
+# # environ.Env.read_env(os.path.join(BASE_DIR, '.env'))  # Load .env file
 
 # Set Razorpay credentials
-RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID')
-RAZORPAY_SECRET_KEY = env('RAZORPAY_SECRET_KEY')
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
+RAZORPAY_SECRET_KEY = os.getenv('RAZORPAY_SECRET_KEY')
 
 
 SIMPLE_JWT = {
