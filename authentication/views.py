@@ -109,8 +109,9 @@ def loginPage(request):
     except UserProfile.DoesNotExist:
         return Response({'message': 'User profile not found.'}, status=400)
 
-    # Check and manage device limits
+    
     system_info = get_system_info()
+
     if not check_device_limit(user_profile, system_info):
         return Response({
             'message': 'Device limit exceeded. You can only log in on 3 devices.',

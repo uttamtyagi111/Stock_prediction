@@ -7,6 +7,8 @@ urlpatterns = [
     path('', include('authentication.urls')),
 
     path('', include('email_sender.urls')),
+    
+    path('', include('subscriptions.urls')),
 
     path('admin/', admin.site.urls),
 ]
