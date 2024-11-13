@@ -49,39 +49,79 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 logger = logging.getLogger(__name__)
 # from .utils import get_system_info
+    # @api_view(['GET'])
+    # @permission_classes([AllowAny])
+    # def system_info_view(request):
+    #     info = get_system_info()
+    #     return Response(info)
+
+    # def get_system_info():
+    #     try:
+    #         command = "wmic csproduct get name, identifyingnumber"
+    #         result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            
+    #         if result.returncode == 0:
+    #             output_lines = result.stdout.strip().split("\n")
+
+    #             output_lines = [line.strip() for line in output_lines if line.strip()]
+
+    #             if len(output_lines) >= 2:
+    #                 headers = output_lines[0].split() 
+    #                 values = output_lines[1].split(maxsplit=1) 
+
+    #                 system_info = {
+    #                     "IdentifyingNumber": values[0],
+    #                     "Name": values[1] if len(values) > 1 else None
+    #                 }
+    #             else:
+    #                 system_info = {"error": "Unexpected command output"}
+
+    #             return system_info
+    #         else:
+    #             return {"error": result.stderr}
+    #     except Exception as e:
+    #         return {"error": str(e)}
+    
+# views.py      
+
+# views.py
+
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from subscriptions.models import UserDevice
+
 @api_view(['GET'])
-@permission_classes([AllowAny])
-def system_info_view(request):
-    info = get_system_info()
-    return Response(info)
+@permission_classes([IsAuthenticated])
+def get_logged_in_devices(request):
+    # Get the current user from the request
+    user = request.user
+    
+    # Fetch the devices associated with the user
+    user_devices = UserDevice.objects.filter(user=user)
+    
+    # Prepare a list of device details (excluding the token for security purposes)
+    device_data = []
+    for device in user_devices:
+        device_data.append({
+            'device_name': device.device_name,
+            'system_info': device.system_info  # Can include OS, browser, etc.
+        })
+    
+    # Return the list of logged-in devices
+    return Response({
+        'logged_in_devices': device_data,
+        'message': 'Logged-in devices fetched successfully'
+    })
 
-def get_system_info():
-    try:
-        command = "wmic csproduct get name, identifyingnumber"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            output_lines = result.stdout.strip().split("\n")
 
-            output_lines = [line.strip() for line in output_lines if line.strip()]
-
-            if len(output_lines) >= 2:
-                headers = output_lines[0].split() 
-                values = output_lines[1].split(maxsplit=1) 
-
-                system_info = {
-                    "IdentifyingNumber": values[0],
-                    "Name": values[1] if len(values) > 1 else None
-                }
-            else:
-                system_info = {"error": "Unexpected command output"}
-
-            return system_info
-        else:
-            return {"error": result.stderr}
-    except Exception as e:
-        return {"error": str(e)}
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.contrib.auth import authenticate
+from subscriptions.models import UserProfile, UserDevice
+from rest_framework_simplejwt.tokens import RefreshToken
+import json
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -109,29 +149,65 @@ def loginPage(request):
     except UserProfile.DoesNotExist:
         return Response({'message': 'User profile not found.'}, status=400)
 
-    
-    system_info = get_system_info()
+    # Get system_info from request data (frontend should send this)
+    system_info = request.data.get('system_info')
+    if not system_info:
+        return Response({'message': 'System info is required.'}, status=400)
 
+    system_info = json.loads(system_info)
+
+    # Check if the user has exceeded the device limit
     if not check_device_limit(user_profile, system_info):
         return Response({
             'message': 'Device limit exceeded. You can only log in on 3 devices.',
-            'logged_in_devices': user_profile.system_info
+            'logged_in_devices': get_logged_in_devices(user_profile)
         }, status=400)
 
-    # Generate tokens without using django_login
+    # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
-    user_profile.refresh_token = str(refresh)  # Save new refresh token
-    user_profile.system_info = system_info
-    user_profile.save()
+    access_token = str(refresh.access_token)
+    refresh_token = str(refresh)
+
+    # Save the device info and token in the database
+    existing_devices = UserDevice.objects.filter(user=user_profile.user)
+    device_count = existing_devices.count()
+    
+    # Generate a unique device name, e.g., "device1", "device2", "device3"
+    device_name = f"device{device_count + 1}"
+    UserDevice.objects.create(
+        user=user,
+        device_name=device_name,
+        system_info=system_info,  # Save system info for future reference
+        token=access_token  # Save token for future logout functionality
+    )
 
     return Response({
         'user_id': user.id,
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
+        'access': access_token,
+        'refresh': refresh_token,
         'system_info': system_info,
         'redirect': 'home',
         'message': 'Login successful'
     })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def logout_view(request):
+    device_name = request.data.get('device_name')
+    if not device_name:
+        return Response({'message': 'Device name is required.'}, status=400)
+
+    try:
+        user_device = UserDevice.objects.get(user=request.user, device_name=device_name)
+    except UserDevice.DoesNotExist:
+        return Response({'message': 'Device not found.'}, status=400)
+
+    # Blacklist the token and delete the device entry from the database
+    user_device.token = 'blacklisted'  # Mark token as blacklisted
+    user_device.delete()
+
+    return Response({'message': 'Device logged out successfully.'})
 
 
 def check_device_limit(user_profile, system_info):
@@ -140,31 +216,29 @@ def check_device_limit(user_profile, system_info):
     """
     if user_profile.plan_name == 'basic':
         # Basic Plan: Only 1 device allowed
-        if user_profile.refresh_token:  # Clear any existing token
-            user_profile.refresh_token = None
-            user_profile.save()
-        return True
-
+        existing_devices = UserDevice.objects.filter(user=user_profile.user)
+        if existing_devices.count() >= 1:
+            return False  # Exceeds device limit
     elif user_profile.plan_name == 'premium':
         # Premium Plan: Up to 3 devices allowed
-        existing_tokens_count = UserProfile.objects.filter(
-            refresh_token__isnull=False, user=user_profile.user).count()
-        if existing_tokens_count >= 3:
+        existing_devices = UserDevice.objects.filter(user=user_profile.user)
+        if existing_devices.count() >= 3:
             return False  # Exceeds device limit
     return True
 
-# from django.contrib.auth import authenticate, login as django_login, logout
-# from rest_framework.decorators import api_view, permission_classes
-# from rest_framework.permissions import AllowAny
-# from rest_framework.response import Response
-# from rest_framework_simplejwt.tokens import RefreshToken
-# from subscriptions.models import UserProfile
-# from .forms import EmailLoginForm
+def get_logged_in_devices(user_profile):
+    """
+    Returns the list of devices the user is logged in on.
+    """
+    devices = UserDevice.objects.filter(user=user_profile.user)
+    devices_info = [{"device_name": device.device_name, "system_info": device.system_info} for device in devices]
+    return devices_info
+
+
 
 # @api_view(['POST'])
 # @permission_classes([AllowAny])
 # def loginPage(request):
-#     logout(request)  # Log out any existing session
 #     form = EmailLoginForm(data=request.data)
 
 #     if not form.is_valid():
@@ -173,7 +247,6 @@ def check_device_limit(user_profile, system_info):
 #             'errors': form.errors
 #         }, status=400)
 
-#     # Extract credentials
 #     email = form.cleaned_data['email']
 #     password = form.cleaned_data['password']
 #     user = authenticate(request, email=email, password=password)
@@ -189,16 +262,16 @@ def check_device_limit(user_profile, system_info):
 #     except UserProfile.DoesNotExist:
 #         return Response({'message': 'User profile not found.'}, status=400)
 
-#     # Check and manage device limits
+    
 #     system_info = get_system_info()
+
 #     if not check_device_limit(user_profile, system_info):
 #         return Response({
 #             'message': 'Device limit exceeded. You can only log in on 3 devices.',
 #             'logged_in_devices': user_profile.system_info
 #         }, status=400)
 
-#     # Log in user and generate tokens
-#     django_login(request, user)
+#     # Generate tokens without using django_login
 #     refresh = RefreshToken.for_user(user)
 #     user_profile.refresh_token = str(refresh)  # Save new refresh token
 #     user_profile.system_info = system_info
@@ -213,21 +286,41 @@ def check_device_limit(user_profile, system_info):
 #         'message': 'Login successful'
 #     })
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def logout_view(request):
-    try:
-        refresh_token = request.data.get('refresh')
 
-        if not refresh_token:
-            return Response({'message': 'Refresh token is required.'}, status=400)
+# def check_device_limit(user_profile, system_info):
+#     """
+#     Checks if the user has exceeded the allowed device limit.
+#     """
+#     if user_profile.plan_name == 'basic':
+#         # Basic Plan: Only 1 device allowed
+#         if user_profile.refresh_token:  # Clear any existing token
+#             user_profile.refresh_token = None
+#             user_profile.save()
+#         return True
+
+#     elif user_profile.plan_name == 'premium':
+#         # Premium Plan: Up to 3 devices allowed
+#         existing_tokens_count = UserProfile.objects.filter(
+#             refresh_token__isnull=False, user=user_profile.user).count()
+#         if existing_tokens_count >= 3:
+#             return False  # Exceeds device limit
+#     return True
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def logout_view(request):
+#     try:
+#         refresh_token = request.data.get('refresh')
+
+#         if not refresh_token:
+#             return Response({'message': 'Refresh token is required.'}, status=400)
         
-        token = RefreshToken(refresh_token)
-        token.blacklist()  # Blacklist the token on logout
+#         token = RefreshToken(refresh_token)
+#         token.blacklist()  # Blacklist the token on logout
 
-        return Response({'message': 'Logout successful'}, status=200)
-    except InvalidToken:
-        return Response({'message': 'Invalid token'}, status=400)
+#         return Response({'message': 'Logout successful'}, status=200)
+#     except InvalidToken:
+#         return Response({'message': 'Invalid token'}, status=400)
 
 
 @api_view(['GET'])

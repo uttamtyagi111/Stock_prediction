@@ -16,6 +16,24 @@ class UserProfileAdmin(admin.ModelAdmin):
     def plan_name(self, obj):
         return obj.current_plan.name if obj.current_plan else 'No Plan Assigned'
     plan_name.short_description = 'Plan Name'
+    
+    
+
+from subscriptions.models import UserDevice
+
+class UserDeviceAdmin(admin.ModelAdmin):
+    list_display = ('user', 'device_name', 'system_info', 'token', 'created_at')  # Columns displayed
+    search_fields = ('user__email', 'device_name')  # Enable searching by email or device name
+    list_filter = ('user', 'device_name')  # Filters for easier navigation
+    readonly_fields = ('token',)  # Make the token field read-only
+
+    def save_model(self, request, obj, form, change):
+        # You can add custom logic for saving the model here if needed
+        super().save_model(request, obj, form, change)
+
+# Register UserDevice model
+admin.site.register(UserDevice, UserDeviceAdmin)
+
 
 # from django.contrib import admin
 # from .models import Order
