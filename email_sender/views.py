@@ -252,27 +252,27 @@ class SendEmailsView(APIView):
             logger.error(f"Error fetching file from S3: {str(e)}")
             raise
     def post(self, request, *args, **kwargs):
-        user = request.user
-        profile, created = UserProfile.objects.get_or_create(user=user)
+        # user = request.user
+        # profile, created = UserProfile.objects.get_or_create(user=user)
         
-        can_send, message = profile.can_send_email()
-        if not can_send:
-            return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
-            #         # Check if the user's plan status is active and if they have not exceeded their email limit
-        if profile.plan_status == 'expired':
-            return Response({'error': 'Your account is inactive. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
+        # can_send, message = profile.can_send_email()
+        # if not can_send:
+        #     return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
+        #     #         # Check if the user's plan status is active and if they have not exceeded their email limit
+        # if profile.plan_status == 'expired':
+        #     return Response({'error': 'Your account is inactive. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
         
-        # Determine the email limit, using a default if the current_plan is None
-        email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
+        # # Determine the email limit, using a default if the current_plan is None
+        # email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
 
-        # Check if the user has exceeded their email limit
-        if profile.emails_sent >= email_limit:
-            profile.plan_status = 'expired'  # Mark the plan as expired
-            profile.save()  # Save the updated status
-            return Response(
-                {'error': 'Email limit exceeded. Please select a plan to continue.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # # Check if the user has exceeded their email limit
+        # if profile.emails_sent >= email_limit:
+        #     profile.plan_status = 'expired'  # Mark the plan as expired
+        #     profile.save()  # Save the updated status
+        #     return Response(
+        #         {'error': 'Email limit exceeded. Please select a plan to continue.'},
+        #         status=status.HTTP_403_FORBIDDEN
+        #     )
             
         serializer = EmailSendSerializer(data=request.data)
         if serializer.is_valid():
