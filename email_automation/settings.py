@@ -25,7 +25,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*','https://email-automation-mocha.vercel.app', ]
 
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
@@ -111,7 +111,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://wishgeeksdigital.com',
+    # 'https://wishgeeksdigital.com',
     'https://email-automation-mocha.vercel.app',   
 ]
 
