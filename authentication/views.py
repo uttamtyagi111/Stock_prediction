@@ -83,23 +83,32 @@ logger = logging.getLogger(__name__)
     #             return {"error": result.stderr}
     #     except Exception as e:
     #         return {"error": str(e)}
-
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from subscriptions.models import UserDevice
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_logged_in_devices(request):
-    # Get the current user from the request
-    user = request.user
+    # Check if the user is authenticated
+    if not request.user.is_authenticated:
+        return Response({"error": "User is not authenticated"}, status=401)
     
+    # Get the current authenticated user
+    user = request.user
+
     # Fetch the devices associated with the user
     user_devices = UserDevice.objects.filter(user=user)
-    
-    # Prepare a list of device details (excluding the token for security purposes)
+
+    # Prepare a list of device details
     device_data = []
     for device in user_devices:
         device_data.append({
             'device_name': device.device_name,
-            'system_info': device.system_info  # Can include OS, browser, etc.
+            'system_info': device.system_info,
+            # 'device_id': device.id,  # Include device ID
+            # 'last_login': device.last_login,  # If available, include the last login time or other useful data
         })
     
     # Return the list of logged-in devices
@@ -159,7 +168,7 @@ def loginPage(request):
     if not check_device_limit(user_profile, system_info,device_limit):
         return Response({
             'message': f'Device limit exceeded. You can only log in on {device_limit} device(s). Please log out from other devices to log in.',
-            'logged_in_devices': get_logged_in_devices(user_profile)
+            'logged_in_devices': logged_in_devices(user_profile)
         }, status=200)
 
     # Generate JWT tokens
@@ -230,7 +239,7 @@ class LogoutDeviceView(APIView):
             new_access_token = str(refresh.access_token)
             new_refresh_token= str(refresh)
 
-            device.system_info = request.data.get('system_info')  
+            device.system_info = request.data.get('system_info',"")  
             device.token = str(new_refresh_token)  
             device.save()
 
@@ -362,7 +371,7 @@ def check_device_limit(user_profile, system_info,device_limit):
 
 
 
-def get_logged_in_devices(user_profile):
+def logged_in_devices(user_profile):
     """
     Returns the list of devices the user is logged in on.
     """
