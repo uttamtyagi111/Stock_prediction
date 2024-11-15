@@ -160,7 +160,7 @@ def loginPage(request):
         return Response({
             'message': f'Device limit exceeded. You can only log in on {device_limit} device(s). Please log out from other devices to log in.',
             'logged_in_devices': get_logged_in_devices(user_profile)
-        }, status=400)
+        }, status=200)
 
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
@@ -230,7 +230,7 @@ class LogoutDeviceView(APIView):
             new_access_token = str(refresh.access_token)
             new_refresh_token= str(refresh)
 
-            device.system_info = request.data.get('system_info', "")  
+            device.system_info = request.data.get('system_info')  
             device.token = str(new_refresh_token)  
             device.save()
 
