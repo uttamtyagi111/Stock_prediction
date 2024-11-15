@@ -1,6 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from .forms import OTPVerificationForm
 from django.http import JsonResponse
@@ -23,6 +24,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth.models import User
 from .forms import PasswordResetRequestForm
 from .utils import send_password_reset_email  
+from subscriptions.models import UserProfile, UserDevice
 import random,logging,subprocess
 from django.shortcuts import render
 from django.core.cache import cache
@@ -81,15 +83,7 @@ logger = logging.getLogger(__name__)
     #             return {"error": result.stderr}
     #     except Exception as e:
     #         return {"error": str(e)}
-    
-# views.py      
 
-# views.py
-
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from subscriptions.models import UserDevice
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -115,13 +109,10 @@ def get_logged_in_devices(request):
     })
 
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from django.contrib.auth import authenticate
-from subscriptions.models import UserProfile, UserDevice
-from rest_framework_simplejwt.tokens import RefreshToken
-import json
+
+
+
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -148,6 +139,14 @@ def loginPage(request):
         user_profile = UserProfile.objects.get(user=user)
     except UserProfile.DoesNotExist:
         return Response({'message': 'User profile not found.'}, status=400)
+    
+    plan_name = getattr(user_profile.plan_name, 'name', None)  # Assuming `plan` is a ForeignKey in UserProfile
+    if not plan_name or plan_name.lower() == "basic":
+        device_limit = 1
+    elif plan_name.lower() == "premium":
+        device_limit = 3
+    else:
+        return Response({'message': 'Invalid plan name.'}, status=400)
 
     # Get system_info from request data (frontend should send this)
     system_info = request.data.get('system_info')
@@ -157,9 +156,9 @@ def loginPage(request):
     # system_info = json.loads(system_info)
 
     # Check if the user has exceeded the device limit
-    if not check_device_limit(user_profile, system_info):
+    if not check_device_limit(user_profile, system_info,device_limit):
         return Response({
-            'message': 'Device limit exceeded. You can only log in on 3 devices.',
+            'message': f'Device limit exceeded. You can only log in on {device_limit} device(s). Please log out from other devices to log in.',
             'logged_in_devices': get_logged_in_devices(user_profile)
         }, status=400)
 
@@ -189,23 +188,8 @@ def loginPage(request):
         'redirect': 'home',
         'message': 'Login successful'
     })
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from rest_framework.decorators import api_view
 
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.exceptions import InvalidToken
-# views.py
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from subscriptions.models import UserDevice
-from rest_framework.views import APIView
+
 
 class LogoutDeviceView(APIView):
     permission_classes = [AllowAny]
@@ -354,12 +338,17 @@ class LogoutDeviceView(APIView):
 
 
 
-def check_device_limit(user_profile, system_info):
+def check_device_limit(user_profile, system_info,device_limit):
     """
     Checks if the user has exceeded the allowed device limit.
     """
 
-    if user_profile.plan_name == 'basic' or user_profile.plan_name == None:
+    if user_profile.plan_name == None:
+        # Basic Plan: Only 1 device allowed
+        existing_devices = UserDevice.objects.filter(user=user_profile.user)
+        if existing_devices.count() >= 1:
+            return False  # Exceeds device limit
+    elif user_profile.plan_name == 'Basic':
         # Basic Plan: Only 1 device allowed
         existing_devices = UserDevice.objects.filter(user=user_profile.user)
         if existing_devices.count() >= 1:
