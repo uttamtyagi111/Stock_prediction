@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path
+from .views import LogoutDeviceView
 from . import views
 from django.urls import path
 from rest_framework_simplejwt.views import (
@@ -10,6 +11,7 @@ urlpatterns = [
     path('register/', views.registerPage, name="register"),
     path('login/', views.loginPage, name="login"),
     path('logout/', views.logout_view, name='logout'),
+    path('logout-device/', LogoutDeviceView.as_view(), name='logout-device'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('verify-otp/',views.verify_otp, name='verify_otp'),
