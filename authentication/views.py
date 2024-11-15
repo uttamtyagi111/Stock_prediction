@@ -353,7 +353,7 @@ def check_device_limit(user_profile, system_info,device_limit):
         existing_devices = UserDevice.objects.filter(user=user_profile.user)
         if existing_devices.count() >= 1:
             return False  # Exceeds device limit
-    elif user_profile.plan_name == 'premium':
+    elif user_profile.plan_name == 'Premium':
         # Premium Plan: Up to 3 devices allowed
         existing_devices = UserDevice.objects.filter(user=user_profile.user)
         if existing_devices.count() >= 3:
