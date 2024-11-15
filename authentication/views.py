@@ -200,59 +200,118 @@ def loginPage(request):
 
 
 
+# class LogoutDeviceView(APIView):
+#     permission_classes = [AllowAny]
+#     def post(self, request):
+#         # Device ID ko request se lena
+#         device_id = request.data.get('device_id')
+#         email = request.data.get('email')
+
+#         if not device_id:
+#             return JsonResponse({'error': 'Device ID is required'}, status=400)
+
+#         try:
+#             # Get the user by email
+#             user = User.objects.get(email=email)
+#         except User.DoesNotExist:
+#             return JsonResponse({'error': 'User not found'}, status=400)
+#         # UserDevice ko ID ke basis par fetch karna
+#         device = get_object_or_404(UserDevice, id=device_id)
+
+#         # Refresh token ko fetch karna (token field ka use karke)
+#         refresh_token = device.token
+
+#         if not refresh_token:
+#             return JsonResponse({'error': 'No refresh token found for this device'}, status=400)
+#         try:
+#             # Refresh token ko blacklist karna
+#             token = RefreshToken(refresh_token)
+#             token.blacklist()  # Blacklist the refresh token
+
+#             # Device record ka refresh token ko blank kar dena (optional)
+#             device.system_info = ""
+#             device.token = ""
+#             device.save()
+
+#             # Device ko delete karna
+#             # device.delete()
+#             refresh = RefreshToken.for_user(user)
+#             new_access_token = str(refresh.access_token)
+#             new_refresh_token= str(refresh)
+
+#             device.system_info = request.data.get('system_info',"")  
+#             device.token = str(new_refresh_token)  
+#             device.save()
+
+#             return Response({
+#                 'success': 'User logged out and token blacklisted successfully',
+#                 'user_id': user.id,
+#                 'access_token': new_access_token,
+#                 'refresh_token': new_refresh_token,
+#                 'system_info': device.system_info
+#             })
+
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=400)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound
+from rest_framework_simplejwt.tokens import RefreshToken
+from subscriptions.models import UserDevice  # Replace with your actual app name
+
 class LogoutDeviceView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
-        # Device ID ko request se lena
+        # Get the device ID and system info from the request
         device_id = request.data.get('device_id')
-        email = request.data.get('email')
+        system_info = request.data.get('system_info', "")
 
         if not device_id:
-            return JsonResponse({'error': 'Device ID is required'}, status=400)
+            return Response({'error': 'Device ID is required'}, status=400)
+
+        # Ensure the device exists and belongs to the logged-in user
+        try:
+            device = UserDevice.objects.get(id=device_id, user=request.user)
+        except UserDevice.DoesNotExist:
+            raise NotFound({'error': 'Device not found or does not belong to the user'})
+
+        # Fetch the old refresh token stored for this device
+        old_refresh_token = device.token
+
+        if not old_refresh_token:
+            return Response({'error': 'No refresh token found for this device'}, status=400)
 
         try:
-            # Get the user by email
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'User not found'}, status=400)
-        # UserDevice ko ID ke basis par fetch karna
-        device = get_object_or_404(UserDevice, id=device_id)
+            # Blacklist the old refresh token
+            token = RefreshToken(old_refresh_token)
+            token.blacklist()
 
-        # Refresh token ko fetch karna (token field ka use karke)
-        refresh_token = device.token
-
-        if not refresh_token:
-            return JsonResponse({'error': 'No refresh token found for this device'}, status=400)
-        try:
-            # Refresh token ko blacklist karna
-            token = RefreshToken(refresh_token)
-            token.blacklist()  # Blacklist the refresh token
-
-            # Device record ka refresh token ko blank kar dena (optional)
-            device.system_info = ""
-            device.token = ""
-            device.save()
-
-            # Device ko delete karna
-            # device.delete()
-            refresh = RefreshToken.for_user(user)
+            # Generate a new refresh and access token for the device
+            refresh = RefreshToken.for_user(request.user)
+            new_refresh_token = str(refresh)
             new_access_token = str(refresh.access_token)
-            new_refresh_token= str(refresh)
 
-            device.system_info = request.data.get('system_info',"")  
-            device.token = str(new_refresh_token)  
+            # Update the device with the new token and system info
+            device.token = new_refresh_token
+            device.system_info = system_info
             device.save()
 
             return Response({
-                'success': 'User logged out and token blacklisted successfully',
-                'user_id': user.id,
-                'access_token': new_access_token,
-                'refresh_token': new_refresh_token,
-                'system_info': device.system_info
-            })
+                'success': 'Device logged out and new tokens generated successfully',
+                'device_id': device_id,
+                'device_name': device.device_name,
+                'system_info': device.system_info,
+                'new_access_token': new_access_token,
+                'new_refresh_token': new_refresh_token,
+            }, status=200)
 
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return Response({'error': str(e)}, status=400)
+
+
 
 
 # @api_view(['POST'])
