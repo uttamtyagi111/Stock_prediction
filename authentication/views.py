@@ -253,63 +253,64 @@ def loginPage(request):
 
 #         except Exception as e:
 #             return JsonResponse({'error': str(e)}, status=400)
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from subscriptions.models import UserDevice  # Replace with your actual app name
+from django.shortcuts import get_object_or_404
+from subscriptions.models import UserDevice
 
 class LogoutDeviceView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # Get the device ID and system info from the request
+        # Fetch device_id and system_info from the request
         device_id = request.data.get('device_id')
-        system_info = request.data.get('system_info', "")
+        system_info = request.data.get('system_info')
 
-        if not device_id:
-            return Response({'error': 'Device ID is required'}, status=400)
-
-        # Ensure the device exists and belongs to the logged-in user
-        try:
-            device = UserDevice.objects.get(id=device_id, user=request.user)
-        except UserDevice.DoesNotExist:
-            raise NotFound({'error': 'Device not found or does not belong to the user'})
-
-        # Fetch the old refresh token stored for this device
-        old_refresh_token = device.token
-
-        if not old_refresh_token:
-            return Response({'error': 'No refresh token found for this device'}, status=400)
+        if not device_id or not system_info:
+            return Response({'error': 'Device ID and system info are required'}, status=400)
 
         try:
-            # Blacklist the old refresh token
-            token = RefreshToken(old_refresh_token)
-            token.blacklist()
+            # Fetch the device with the given device_id
+            device = get_object_or_404(UserDevice, id=device_id)
 
-            # Generate a new refresh and access token for the device
-            refresh = RefreshToken.for_user(request.user)
-            new_refresh_token = str(refresh)
-            new_access_token = str(refresh.access_token)
+            # Fetch the user associated with the device
+            user = device.user
 
-            # Update the device with the new token and system info
-            device.token = new_refresh_token
-            device.system_info = system_info
+            # Fetch the associated refresh token
+            old_refresh_token = device.token
+
+            if not old_refresh_token:
+                return Response({'error': 'No refresh token found for this device'}, status=400)
+
+            try:
+                # Blacklist the old refresh token
+                old_token = RefreshToken(old_refresh_token)
+                old_token.blacklist()
+            except Exception as e:
+                return Response({'error': f'Failed to blacklist old token: {str(e)}'}, status=400)
+
+            # Generate new tokens for the device
+            new_refresh_token = RefreshToken.for_user(user)
+            new_access_token = str(new_refresh_token.access_token)
+
+            # Update the UserDevice entry with new tokens and system info
+            device.token = str(new_refresh_token)  # Save the new refresh token
+            device.system_info = system_info  # Update system info from frontend
             device.save()
 
             return Response({
-                'success': 'Device logged out and new tokens generated successfully',
+                'success': f'Device {device.device_name} updated successfully.',
                 'device_id': device_id,
-                'device_name': device.device_name,
-                'system_info': device.system_info,
-                'new_access_token': new_access_token,
-                'new_refresh_token': new_refresh_token,
+                'access_token': new_access_token,
+                'refresh_token': str(new_refresh_token),
+                'system_info': device.system_info
             }, status=200)
 
         except Exception as e:
             return Response({'error': str(e)}, status=400)
+
 
 
 
