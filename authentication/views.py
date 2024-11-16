@@ -121,7 +121,7 @@ def get_logged_in_devices(request):
 
 
 
-
+from subscriptions.models import UserDevice
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -182,7 +182,7 @@ def loginPage(request):
     
     # Generate a unique device name, e.g., "device1", "device2", "device3"
     device_name = f"device{device_count + 1}"
-    UserDevice.objects.create(
+    user_device = UserDevice.objects.create(
         user=user,
         device_name=device_name,
         system_info=system_info,  # Save system info for future reference
@@ -194,6 +194,7 @@ def loginPage(request):
         'access': access_token,
         'refresh': refresh_token,
         'system_info': system_info,
+        "device_id": user_device.id,
         'redirect': 'home',
         'message': 'Login successful'
     })
@@ -442,90 +443,88 @@ def logged_in_devices(user_profile):
 
 
 # @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def loginPage(request):
-#     form = EmailLoginForm(data=request.data)
-
-#     if not form.is_valid():
-#         return Response({
-#             'form_valid': form.is_valid(),
-#             'errors': form.errors
-#         }, status=400)
-
-#     email = form.cleaned_data['email']
-#     password = form.cleaned_data['password']
-#     user = authenticate(request, email=email, password=password)
-
-#     if not user:
-#         return Response({'message': 'Email or password is incorrect.'}, status=400)
-
-#     if not user.is_active:
-#         return Response({'message': 'Account is inactive.'}, status=400)
-
+# @permission_classes([IsAuthenticated])
+# def logout_view(request):
 #     try:
-#         user_profile = UserProfile.objects.get(user=user)
-#     except UserProfile.DoesNotExist:
-#         return Response({'message': 'User profile not found.'}, status=400)
+#         refresh_token = request.data.get('refresh')
 
-    
-#     system_info = get_system_info()
+#         if not refresh_token:
+#             return Response({'message': 'Refresh token is required.'}, status=400)
+        
+#         token = RefreshToken(refresh_token)
+#         token.blacklist()  # Blacklist the token on logout
 
-#     if not check_device_limit(user_profile, system_info):
-#         return Response({
-#             'message': 'Device limit exceeded. You can only log in on 3 devices.',
-#             'logged_in_devices': user_profile.system_info
-#         }, status=400)
+#         return Response({'message': 'Logout successful'}, status=200)
+#     except InvalidToken:
+#         return Response({'message': 'Invalid token'}, status=400)
 
-#     # Generate tokens without using django_login
-#     refresh = RefreshToken.for_user(user)
-#     user_profile.refresh_token = str(refresh)  # Save new refresh token
-#     user_profile.system_info = system_info
-#     user_profile.save()
-
-#     return Response({
-#         'user_id': user.id,
-#         'access': str(refresh.access_token),
-#         'refresh': str(refresh),
-#         'system_info': system_info,
-#         'redirect': 'home',
-#         'message': 'Login successful'
-#     })
-
-
-# def check_device_limit(user_profile, system_info):
-#     """
-#     Checks if the user has exceeded the allowed device limit.
-#     """
-#     if user_profile.plan_name == 'basic':
-#         # Basic Plan: Only 1 device allowed
-#         if user_profile.refresh_token:  # Clear any existing token
-#             user_profile.refresh_token = None
-#             user_profile.save()
-#         return True
-
-#     elif user_profile.plan_name == 'premium':
-#         # Premium Plan: Up to 3 devices allowed
-#         existing_tokens_count = UserProfile.objects.filter(
-#             refresh_token__isnull=False, user=user_profile.user).count()
-#         if existing_tokens_count >= 3:
-#             return False  # Exceeds device limit
-#     return True
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.shortcuts import get_object_or_404
+from subscriptions.models import UserDevice
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     try:
+
         refresh_token = request.data.get('refresh')
+        device_id = request.data.get('device_id')
 
         if not refresh_token:
             return Response({'message': 'Refresh token is required.'}, status=400)
-        
-        token = RefreshToken(refresh_token)
-        token.blacklist()  # Blacklist the token on logout
+        if not device_id:
+            return Response({'message': 'Device ID is required.'}, status=400)
 
-        return Response({'message': 'Logout successful'}, status=200)
+
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+
+        device = get_object_or_404(UserDevice, id=device_id)
+
+        if device.user != request.user:
+            return Response({'message': 'You do not have permission to delete this device.'}, status=403)
+
+        device.delete()
+
+        return Response({'message': 'Logout successful and device removed.'}, status=200)
+
     except InvalidToken:
         return Response({'message': 'Invalid token'}, status=400)
+    except Exception as e:
+        return Response({'message': f'Error: {str(e)}'}, status=500)
+    
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import InvalidToken
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # You can adjust this as per your requirements
+def check_blacklisted_token(request):
+    """
+    This API checks if a given refresh token is blacklisted.
+    """
+    refresh_token = request.data.get('refresh_token')  # Expecting the refresh token to be sent in the request body
+    
+    if not refresh_token:
+        return Response({'message': 'Refresh token is required.'}, status=400)
+    
+    try:
+        # Decode the refresh token
+        token = RefreshToken(refresh_token)
+        
+        # Check if the token is blacklisted
+        if token.is_blacklisted():
+            return Response({'message': 'Token is blacklisted.', 'blacklisted': True}, status=200)
+        else:
+            return Response({'message': 'Token is not blacklisted.', 'blacklisted': False}, status=200)
+    
+    except InvalidToken:
+        return Response({'message': 'Invalid refresh token.', 'blacklisted': False}, status=400)
 
 
 @api_view(['GET'])

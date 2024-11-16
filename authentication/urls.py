@@ -20,4 +20,5 @@ urlpatterns = [
     path('home/', views.home, name="home"),
     path('users/', views.user_list, name='user_list'),
     path('devices/', views.get_logged_in_devices, name='get_logged_in_devices'),
+    path('blacklisted-token/', views.check_blacklisted_token, name='check_blacklisted_token'),
 ]
