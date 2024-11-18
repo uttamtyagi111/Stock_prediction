@@ -44,15 +44,14 @@ def send_password_reset_email(user, base_url):
     token = default_token_generator.make_token(user)
     reset_link = f"{base_url}/reset_password/{uidb64}/{token}/"
     
-    # Render the HTML email template
+
     html_content = render_to_string('emails/password_reset_email.html', {'reset_link': reset_link, 'username': user.username})
     subject = 'Your Wish Geeks Techserve Password Reset Request'
     from_email = settings.DEFAULT_FROM_EMAIL
 
-    # Send email with both HTML and plain text versions
     email_message = EmailMultiAlternatives(
         subject=subject,
-        body=f"Click the link to reset your password: {reset_link}",  # plain text content
+        body=f"Click the link to reset your password: {reset_link}",  
         from_email=from_email,
         to=[user.email]
     )

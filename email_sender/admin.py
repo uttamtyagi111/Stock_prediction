@@ -15,11 +15,10 @@ class SMTPServerAdmin(admin.ModelAdmin):
 
 @admin.register(EmailStatusLog)
 class EmailStatusLogAdmin(admin.ModelAdmin):
-    list_display = ('id','email', 'status', 'timestamp', 'user', 'from_email', 'smtp_server')  # Customize fields to display
-    list_filter = ('status', 'user', 'smtp_server')  # Add filters for better searchability
-    search_fields = ('email', 'status', 'from_email')  # Add a search box for filtering logs
+    list_display = ('id','email', 'status', 'timestamp', 'user', 'from_email', 'smtp_server')  
+    search_fields = ('email', 'status', 'from_email')
 
     def user(self, obj):
-        return obj.user.username  # Display the username instead of the user object
+        return obj.user.username  
 
     user.short_description = 'User' 

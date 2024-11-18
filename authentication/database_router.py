@@ -1,4 +1,3 @@
-# authentication/database_router.py
 
 class DatabaseRouter:
     def db_for_read(self, model, **hints):

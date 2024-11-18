@@ -1,3 +1,4 @@
+from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -232,20 +233,6 @@ class FileUploadView(APIView):
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.mail import get_connection, EmailMessage
-from django.conf import settings
-from django.template import Template, Context
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
-from io import StringIO
-import boto3
-import csv
-import time
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -298,7 +285,6 @@ class SendEmailsView(APIView):
             display_name = serializer.validated_data['display_name']
             user_id = request.user.id
 
-            # Retrieve HTML content from S3
             try:
                 file_content = self.get_html_content_from_s3(uploaded_file_key)
             except Exception as e:
@@ -350,7 +336,6 @@ class SendEmailsView(APIView):
                     'display_name': display_name,
                 }
                 try:
-                    # Render email content with context
                     template = Template(file_content)
                     context_data = Context(context)
                     email_content = template.render(context_data)
@@ -377,7 +362,6 @@ class SendEmailsView(APIView):
                 )
                 email.content_subtype = 'html'
                 
-                # Send email using the SMTP connection
                 try:
                     connection = get_connection(
                         backend='django.core.mail.backends.smtp.EmailBackend',
@@ -398,7 +382,6 @@ class SendEmailsView(APIView):
                     failed_sends += 1
                     logger.error(f"Error sending email to {recipient_email}: {str(e)}")
 
-                # Log status with timestamp
                 timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                 email_statuses.append({
                     'email': recipient_email,
@@ -624,14 +607,12 @@ class SendEmailsView(APIView):
 class EmailStatusAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
-        user = request.user  # Get the logged-in user
+        user = request.user  
 
-        # Query the email status logs for the current user
         total_emails = EmailStatusLog.objects.filter(user=user).count()
         successful_sends = EmailStatusLog.objects.filter(user=user, status='Sent successfully').count()
         failed_sends = EmailStatusLog.objects.filter(user=user, status__startswith='Failed').count()
 
-        # Prepare the analytics data
         analytics_data = {
             'total_emails': total_emails,
             'successful_sends': successful_sends,

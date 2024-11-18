@@ -51,22 +51,18 @@ def choose_plan_view(request):
     """
     plan_name = request.data.get('plan_name')
     
-    # Validate if the plan name is either 'basic' or 'premium'
     if plan_name not in ['basic', 'premium']:
         return Response({'message': 'Invalid plan selected. Choose either "basic" or "premium".'}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        # Fetch the user profile
+
         user_profile = UserProfile.objects.get(user=request.user)
-        
-        # Fetch the plan based on the name
         plan = Plan.objects.get(name__iexact=plan_name)
         
-        # Update the user's plan details
         user_profile.plan_name = plan.name
         user_profile.current_plan = plan
         user_profile.plan_status = "active"
-        user_profile.emails_sent = 0  # Reset email count for new plan
+        user_profile.emails_sent = 0  
         user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
         user_profile.save()
 
@@ -85,18 +81,13 @@ def upgrade_plan(request):
     """
     plan_name = request.data.get('plan_name')
     
-    # Validate if the plan name is either 'basic' or 'premium'
     if plan_name not in ['basic', 'premium']:
         return Response({'message': 'Invalid plan selected. Choose either "basic" or "premium".'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Fetch the user profile
         user_profile = UserProfile.objects.get(user=request.user)
-        
-        # Fetch the plan based on the name
         new_plan = Plan.objects.get(name__iexact=plan_name)
         
-        # Update the user's plan details
         user_profile.plan_name = new_plan.name
         user_profile.current_plan = new_plan
         user_profile.plan_status = "active"
@@ -110,16 +101,6 @@ def upgrade_plan(request):
     except Plan.DoesNotExist:
         return Response({'message': 'Selected plan not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from django.utils import timezone
-from datetime import timedelta
-import razorpay
-from razorpay.errors import BadRequestError, ServerError
-from django.conf import settings
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -4,4 +4,4 @@ class SubscriptionsConfig(AppConfig):
     name = 'subscriptions'
 
     def ready(self):
-        import subscriptions.signals  # Register the signals
+        import subscriptions.signals  

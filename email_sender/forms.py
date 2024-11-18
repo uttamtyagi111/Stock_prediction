@@ -9,7 +9,6 @@ class SMTPServerForm(forms.ModelForm):
         
 
 class EmailSendForm(forms.Form):
-    # sender_ids = forms.ModelMultipleChoiceField(queryset=Sender.objects.all(), widget=forms.CheckboxSelectMultiple)
     smtp_server_ids = forms.ModelMultipleChoiceField(queryset=SMTPServer.objects.all(), widget=forms.CheckboxSelectMultiple)
     # upload_file_key = forms.ModelChoiceField(queryset=upload_file_key.all())
     email_list = forms.FileField()
