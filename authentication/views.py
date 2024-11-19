@@ -102,6 +102,7 @@ def get_logged_in_devices(request):
     device_data = []
     for device in user_devices:
         device_data.append({
+            'device_id': device.id,
             'device_name': device.device_name,
             'system_info': device.system_info,
         })
