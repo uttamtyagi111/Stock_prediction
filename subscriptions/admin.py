@@ -22,7 +22,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 from subscriptions.models import UserDevice
 
 class UserDeviceAdmin(admin.ModelAdmin):
-    list_display = ('id','user', 'device_name', 'system_info', 'token', 'created_at')  # Columns displayed
+    list_display = ('user_id','id','user', 'device_name', 'system_info', 'token', 'created_at')  # Columns displayed
     search_fields = ('user__email', 'device_name')  # Enable searching by email or device name
     list_filter = ('user', 'device_name')  # Filters for easier navigation
     readonly_fields = ('token',)  # Make the token field read-only

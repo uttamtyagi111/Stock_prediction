@@ -229,7 +229,7 @@ class LogoutDeviceView(APIView):
 
             return Response({
                 'success': f'Device {device.device_name} updated successfully.',
-                'user_id' : request.user.id,
+                'user_id' : user.id,
                 'device_id': device_id,
                 'access_token': new_access_token,
                 'refresh_token': str(new_refresh_token),
@@ -368,27 +368,62 @@ def logged_in_devices(user_profile):
 
 
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def logout_view(request):
+#     try:
+
+#         refresh_token = request.data.get('refresh')
+#         device_id = request.data.get('device_id')
+
+#         if not refresh_token:
+#             return Response({'message': 'Refresh token is required.'}, status=400)
+#         if not device_id:
+#             return Response({'message': 'Device ID is required.'}, status=400)
+
+
+#         token = RefreshToken(refresh_token)
+#         token.blacklist()
+
+#         device = get_object_or_404(UserDevice, id=device_id)
+
+#         if device.user != request.user:
+#             return Response({'message': 'You do not have permission to delete this device.'}, status=403)
+
+#         device.delete()
+
+#         return Response({'message': 'Logout successful and device removed.'}, status=200)
+
+#     except InvalidToken:
+#         return Response({'message': 'Invalid token'}, status=400)
+#     except Exception as e:
+#         return Response({'message': f'Error: {str(e)}'}, status=500)
+    
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     try:
 
-        refresh_token = request.data.get('refresh')
         device_id = request.data.get('device_id')
 
-        if not refresh_token:
-            return Response({'message': 'Refresh token is required.'}, status=400)
         if not device_id:
             return Response({'message': 'Device ID is required.'}, status=400)
-
-
-        token = RefreshToken(refresh_token)
-        token.blacklist()
 
         device = get_object_or_404(UserDevice, id=device_id)
 
         if device.user != request.user:
-            return Response({'message': 'You do not have permission to delete this device.'}, status=403)
+            return Response({'message': 'You do not have permission to remove this device.'}, status=403)
+
+        refresh_token = device.token
+
+        if not refresh_token:
+            return Response({'message': 'No refresh token found for this device.'}, status=400)
+
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()  
+        except Exception as e:
+            return Response({'message': f'Error blacklisting token: {str(e)}'}, status=400)
 
         device.delete()
 
@@ -398,7 +433,6 @@ def logout_view(request):
         return Response({'message': 'Invalid token'}, status=400)
     except Exception as e:
         return Response({'message': f'Error: {str(e)}'}, status=500)
-    
 
 
 @api_view(['POST'])
