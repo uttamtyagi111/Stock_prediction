@@ -17,7 +17,7 @@ class Plan(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    plan_name = models.CharField(max_length=20, choices=[('Basic', 'Basic'), ('Premium', 'Premium')], null=True, blank=True)
+    plan_name = models.CharField(max_length=20, choices=[('Basic', 'basic'), ('Premium', 'premium')], null=True, blank=True)
     plan_status = models.CharField(max_length=20, default='inactive')
     emails_sent = models.IntegerField(default=0)
     razorpay_order_id = models.CharField(max_length=255, blank=True, null=True,unique=True)

@@ -229,7 +229,7 @@ class LogoutDeviceView(APIView):
 
             return Response({
                 'success': f'Device {device.device_name} updated successfully.',
-                'user_id' : user.id,
+                'user_id' : request.user.id,
                 'device_id': device_id,
                 'access_token': new_access_token,
                 'refresh_token': str(new_refresh_token),
