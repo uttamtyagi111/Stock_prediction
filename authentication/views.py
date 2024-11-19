@@ -200,7 +200,6 @@ class LogoutDeviceView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-
         device_id = request.data.get('device_id')
         system_info = request.data.get('system_info')
 
@@ -208,7 +207,6 @@ class LogoutDeviceView(APIView):
             return Response({'error': 'Device ID and system info are required'}, status=400)
 
         try:
-
             device = get_object_or_404(UserDevice, id=device_id)
             user = device.user
             old_refresh_token = device.token
@@ -231,6 +229,7 @@ class LogoutDeviceView(APIView):
 
             return Response({
                 'success': f'Device {device.device_name} updated successfully.',
+                'user_id' : user.id,
                 'device_id': device_id,
                 'access_token': new_access_token,
                 'refresh_token': str(new_refresh_token),

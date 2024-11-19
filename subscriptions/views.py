@@ -242,7 +242,7 @@ def handle_payment_callback(request):
             return Response({'message': 'Order not found for this user profile.'}, status=404)
 
         # Get current plan and update user profile
-        plan = user_profile.current_plan  # Ensure `current_plan` is set on user_profile
+        plan = user_profile.current_plan
         user_profile.plan_name = plan.name
         user_profile.plan_expiry_date = timezone.now() + timedelta(days=plan.duration_days)
         user_profile.plan_status = 'active'

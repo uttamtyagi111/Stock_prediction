@@ -313,9 +313,8 @@ class SendEmailsView(APIView):
             channel_layer = get_channel_layer()
             smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
             num_smtp_servers = len(smtp_servers)
-
-
-            
+   
+              
             for i, recipient in enumerate(email_list):
                 if profile.emails_sent >= email_limit:
                     for remaining_recipient in email_list[i:]:
@@ -352,7 +351,7 @@ class SendEmailsView(APIView):
                     )
                     return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                # Get the SMTP server to be used
+
                 smtp_server = smtp_servers[i % num_smtp_servers]
                 email = EmailMessage(
                     subject=subject,
