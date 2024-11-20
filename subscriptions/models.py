@@ -45,14 +45,18 @@ class UserProfile(models.Model):
             self.save()
             return False, "Your subscription has expired. Please renew your plan."
 
+        if self.current_plan.email_limit == 0:  # Check if the plan has unlimited email sending
+            return True, "You have unlimited email sending capabilities."
+
+        # Check if the emails sent are within the allowed limit
         if self.emails_sent < self.current_plan.email_limit:
             return True, "You can send emails."
 
-        if self.current_plan.name == "Premium" and self.current_plan.email_limit == float("inf"):
-            return True, "You have unlimited email sending capabilities."
+        # Email limit exceeded
         self.plan_status = "expired"
         self.save()
-        return False, "Email limit exceeded. Please renew or upgrade your plan."
+        return False, "Plan expired . Please renew or upgrade your plan."
+
 
     def activate_plan(self, plan):
         """Activate a new plan for the user."""
