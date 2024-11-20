@@ -266,13 +266,18 @@ class SendEmailsView(APIView):
             return Response({'error': 'Your Trial is expired. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
         
         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
-
-        # Check if the user has exceeded their email limit
-        if profile.emails_sent >= email_limit:
-            profile.plan_status = 'expired'  
-            profile.save() 
+        
+        if email_limit != 0 and profile.emails_sent >= email_limit:
+    # Update plan status to expired for trial users or plans with limited emails
+            if profile.current_plan is None:  # Trial users
+                profile.plan_status = 'expired'
+                profile.save()
+                return Response(
+                    {'error': 'Trial limit exceeded. Please subscribe to a plan to continue.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             return Response(
-                {'error': 'Email limit exceeded. Please select a plan to continue.'},
+                {'error': 'Email limit exceeded. Please upgrade your plan to continue.'},
                 status=status.HTTP_403_FORBIDDEN
             )
            
@@ -316,7 +321,9 @@ class SendEmailsView(APIView):
    
               
             for i, recipient in enumerate(email_list):
-                if profile.emails_sent >= email_limit:
+            # Skip the limit check for unlimited email sending (email_limit = 0)
+                if email_limit != 0 and profile.emails_sent >= email_limit:
+                    # If email limit is reached, mark the remaining emails as failed
                     for remaining_recipient in email_list[i:]:
                         failed_sends += 1
                         email_statuses.append({
@@ -324,7 +331,8 @@ class SendEmailsView(APIView):
                             'status': 'Failed: Email limit exceeded',
                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                         })
-                    break 
+                    break  # Exit the loop after reaching the limit
+
 
                 
                 recipient_email = recipient.get('Email')
