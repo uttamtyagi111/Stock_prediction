@@ -404,7 +404,6 @@ def logged_in_devices(user_profile):
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     try:
-
         device_id = request.data.get('device_id')
 
         if not device_id:
@@ -475,6 +474,7 @@ def home(request):
 
 def generate_otp():
     return str(random.randint(100000, 999999))
+from django.core.cache import cache
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -549,9 +549,6 @@ def verify_otp(request):
             return Response({'message': 'Invalid OTP. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
     
     return Response({'form_valid': form.is_valid(), 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
 
 
 # class ProtectedView(APIView):
