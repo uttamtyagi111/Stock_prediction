@@ -267,14 +267,14 @@ class SendEmailsView(APIView):
         
         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
 
-        # Check if the user has exceeded their email limit
-        if profile.emails_sent >= email_limit:
-            profile.plan_status = 'expired'  
-            profile.save() 
-            return Response(
-                {'error': 'Email limit exceeded. Please select a plan to continue.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # # Check if the user has exceeded their email limit
+        # if profile.emails_sent >= email_limit:
+        #     profile.plan_status = 'expired'  
+        #     profile.save() 
+        #     return Response(
+        #         {'error': 'Email limit exceeded. Please select a plan to continue.'},
+        #         status=status.HTTP_403_FORBIDDEN
+        #     )
            
         serializer = EmailSendSerializer(data=request.data)
         if serializer.is_valid():
