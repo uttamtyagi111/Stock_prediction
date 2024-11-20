@@ -262,8 +262,8 @@ class SendEmailsView(APIView):
         if not can_send:
             return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
            
-        if profile.plan_status == 'expired':
-            return Response({'error': 'Your Trial is expired. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
+        # if profile.plan_status == 'expired':
+        #     return Response({'error': 'Your Trial is expired. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
         
         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
 
