@@ -244,7 +244,7 @@ def handle_payment_callback(request):
         # Get current plan and update user profile
         plan = user_profile.current_plan
         user_profile.plan_name = plan.name
-        user_profile.plan_expiry_date = timezone.now() + timedelta(days=plan.duration_days)
+        user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
         user_profile.plan_status = 'active'
         user_profile.razorpay_payment_id = razorpay_payment_id
         user_profile.save()
