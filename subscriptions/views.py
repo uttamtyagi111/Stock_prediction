@@ -147,7 +147,7 @@ def create_order(request):
     try:
     # #     # Fetch and update the user's profile with the plan details
         user_profile = request.user.userprofile
-        user_profile.plan_name = plan.name
+        # user_profile.plan_name = plan
         user_profile.current_plan = plan
     #     # user_profile.plan_status = "active"
     #     # user_profile.emails_sent = 0  # Reset email count for the new plan
