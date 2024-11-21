@@ -1,6 +1,7 @@
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from email_validator import validate_email, EmailNotValidError
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.base import ContentFile
 from .models import EmailStatusLog 
@@ -331,11 +332,21 @@ class SendEmailsView(APIView):
                             'status': 'Failed: Email limit exceeded',
                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                         })
-                    break  # Exit the loop after reaching the limit
-
-
+                    break# Exit the loop after reaching the limit
                 
                 recipient_email = recipient.get('Email')
+                
+                try:
+                    validated_email = validate_email(recipient_email).email
+                except EmailNotValidError as e:
+                    failed_sends += 1
+                    email_statuses.append({
+                        'email': validated_email,
+                        'status': f'Invalid email address: {str(e)}',
+                        'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    })
+                    continue
+                
                 context = {
                     'firstName': recipient.get('firstName'),
                     'lastName': recipient.get('lastName'),
@@ -352,7 +363,7 @@ class SendEmailsView(APIView):
                         f'email_status_{user_id}',
                         {
                             'type': 'send_status_update',
-                            'email': recipient_email,
+                            'email': validated_email,
                             'status': f'Error formatting email content: {str(e)}',
                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                         }
