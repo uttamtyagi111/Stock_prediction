@@ -102,7 +102,7 @@ def upgrade_plan(request):
         return Response({'message': 'Selected plan not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)    
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -144,20 +144,20 @@ def create_order(request):
         logger.error(f'Unexpected Error: {e}')
         return Response({'message': 'Error creating Razorpay order.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # try:
+    try:
     #     # Fetch and update the user's profile with the plan details
-    #     user_profile = request.user.userprofile
-    #     user_profile.plan_name = plan.name
-    #     user_profile.current_plan = plan
-    #     user_profile.plan_status = "active"
-    #     user_profile.emails_sent = 0  # Reset email count for the new plan
-    #     user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
-    #     user_profile.device_limit = plan.device_limit  # Update device limit based on the plan
-    #     user_profile.razorpay_order_id = razorpay_order['id']
-    #     user_profile.save()
+        user_profile = request.user.userprofile
+        # user_profile.plan_name = plan.name
+        # user_profile.current_plan = plan
+        # user_profile.plan_status = "active"
+        # user_profile.emails_sent = 0  # Reset email count for the new plan
+        # user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
+        # user_profile.device_limit = plan.device_limit  # Update device limit based on the plan
+        user_profile.razorpay_order_id = razorpay_order['id']
+        user_profile.save()
 
-    # except UserProfile.DoesNotExist:
-    #     return Response({'message': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except UserProfile.DoesNotExist:
+        return Response({'message': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
     
     return Response({
         'razorpay_order_id': razorpay_order['id'],
