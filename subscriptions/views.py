@@ -147,8 +147,8 @@ def create_order(request):
     try:
     # #     # Fetch and update the user's profile with the plan details
         user_profile = request.user.userprofile
-    #     # user_profile.plan_name = plan.name
-    #     # user_profile.current_plan = plan
+        # user_profile.plan_name = plan.name
+        user_profile.current_plan = plan.name
     #     # user_profile.plan_status = "active"
     #     # user_profile.emails_sent = 0  # Reset email count for the new plan
     #     # user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
@@ -241,6 +241,7 @@ def handle_payment_callback(request):
             return Response({'message': 'Order not found for this user profile.'}, status=404)
 
         # Get current plan and update user profile
+        
         plan = user_profile.current_plan
         user_profile.plan_name = plan.name
         user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
