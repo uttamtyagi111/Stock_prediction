@@ -356,20 +356,43 @@ class SendEmailsView(APIView):
                     validated_email = validate_email(recipient_email).email
                 except EmailNotValidError as e:
                     failed_sends += 1
+                    status_message = f'Failed to send: {str(e)}'
+                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                     email_statuses.append({
                         'email': recipient_email,
-                        'status': f'Failed to send: {str(e)}',
-                        'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'status': status_message,
+                        'timestamp': timestamp,
                     })
+                    
+                    async_to_sync(channel_layer.group_send)(
+                        f'email_status_{user_id}',
+                        {
+                            'type': 'send_status_update',
+                            'email': recipient_email,
+                            'status': status_message,
+                            'timestamp': timestamp,
+                        }
+                    )
                     continue
                 
                 if not self.validate_email_domain(validated_email):
                     failed_sends += 1
+                    status_message = 'Failed to send: Invalid domain'
+                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                     email_statuses.append({
                         'email': validated_email,
-                        'status': 'Failed to send',
-                        'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'status': status_message,
+                        'timestamp': timestamp,
                     })
+                    async_to_sync(channel_layer.group_send)(
+                        f'email_status_{user_id}',
+                        {
+                            'type': 'send_status_update',
+                            'email': validated_email,
+                            'status': status_message,
+                            'timestamp': timestamp,
+                        }
+                    )
                     continue
                 
                 context = {
@@ -383,17 +406,24 @@ class SendEmailsView(APIView):
                     context_data = Context(context)
                     email_content = template.render(context_data)
                 except Exception as e:
-                    logger.error(f"Error formatting email content: {str(e)}")
+                    failed_sends += 1
+                    status_message = f'Failed to send: Error formatting email content - {str(e)}'
+                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+                    email_statuses.append({
+                        'email': validated_email,
+                        'status': status_message,
+                        'timestamp': timestamp,
+                    })
                     async_to_sync(channel_layer.group_send)(
                         f'email_status_{user_id}',
                         {
                             'type': 'send_status_update',
                             'email': validated_email,
-                            'status': f'Error formatting email content: {str(e)}',
-                            'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'status': status_message,
+                            'timestamp': timestamp,
                         }
                     )
-                    return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    continue
 
 
                 smtp_server = smtp_servers[i % num_smtp_servers]
