@@ -345,10 +345,11 @@ class SendEmailsView(APIView):
                         failed_sends += 1
                         email_statuses.append({
                             'email': remaining_recipient.get('Email'),
-                            'status': f'Failed to send: {str(e)}',
+                            'status': 'Failed: Email limit exceeded',
                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                         })
                     break
+                
                 recipient_email = recipient.get('Email')
                 
                 try:
@@ -366,7 +367,7 @@ class SendEmailsView(APIView):
                     failed_sends += 1
                     email_statuses.append({
                         'email': validated_email,
-                        'status': f'Failed to send: {str(e)}',
+                        'status': 'Failed to send',
                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                     })
                     continue
