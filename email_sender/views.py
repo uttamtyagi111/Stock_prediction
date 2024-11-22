@@ -343,10 +343,20 @@ class SendEmailsView(APIView):
                 if email_limit != 0 and profile.emails_sent >= email_limit:
                     for remaining_recipient in email_list[i:]:
                         failed_sends += 1
+                        status_message = 'Failed to send: Email limit exceeded'
+                        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                         email_statuses.append({
                             'email': remaining_recipient.get('Email'),
-                            'status': 'Failed to send: Email limit exceeded',
-                            'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'status': status_message,
+                            'timestamp': timestamp,
+                        })
+                        async_to_sync(channel_layer.group_send)(
+                        f'email_status_{user_id}',
+                        {
+                            'type': 'send_status_update',
+                            'email': remaining_recipient.get('Email'),
+                            'status': status_message,
+                            'timestamp': timestamp,
                         })
                     break
                 
