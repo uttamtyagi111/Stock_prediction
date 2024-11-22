@@ -287,7 +287,7 @@ class SendEmailsView(APIView):
         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
         
         if email_limit != 0 and profile.emails_sent >= email_limit:
-    # Update plan status to expired for trial users or plans with limited emails
+            # Update plan status to expired for trial users or plans with limited emails
             if profile.current_plan is None:  # Trial users
                 profile.plan_status = 'expired'
                 profile.save()
@@ -340,9 +340,7 @@ class SendEmailsView(APIView):
    
               
             for i, recipient in enumerate(email_list):
-            # Skip the limit check for unlimited email sending (email_limit = 0)
                 if email_limit != 0 and profile.emails_sent >= email_limit:
-                    # If email limit is reached, mark the remaining emails as failed
                     for remaining_recipient in email_list[i:]:
                         failed_sends += 1
                         email_statuses.append({
@@ -350,8 +348,7 @@ class SendEmailsView(APIView):
                             'status': 'Failed: Email limit exceeded',
                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                         })
-                    break# Exit the loop after reaching the limit
-                
+                    break
                 recipient_email = recipient.get('Email')
                 
                 try:
