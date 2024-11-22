@@ -2,6 +2,10 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from email_validator import validate_email, EmailNotValidError
+from validate_email_address import validate_email
+from validate_email_address import EmailNotValidError
+import dns.resolver
+from django.core.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.base import ContentFile
 from .models import EmailStatusLog 
@@ -254,6 +258,20 @@ class SendEmailsView(APIView):
         except Exception as e:
             logger.error(f"Error fetching file from S3: {str(e)}")
             raise
+        
+    def validate_email_domain(self, email):
+        """Validate if the email domain has valid MX records."""
+        domain = email.split('@')[-1]
+        try:
+            dns.resolver.resolve(domain, 'MX')
+            return True
+        except dns.resolver.NoAnswer:
+            return False
+        except dns.resolver.NXDOMAIN:
+            return False
+        except Exception as e:
+            logger.error(f"DNS lookup failed for domain {domain}: {str(e)}")
+            return False
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -341,8 +359,17 @@ class SendEmailsView(APIView):
                 except EmailNotValidError as e:
                     failed_sends += 1
                     email_statuses.append({
-                        'email': validated_email,
+                        'email': recipient_email,
                         'status': f'Invalid email address: {str(e)}',
+                        'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    })
+                    continue
+                
+                if not self.validate_email_domain(validated_email):
+                    failed_sends += 1
+                    email_statuses.append({
+                        'email': validated_email,
+                        'status': 'Invalid email domain or no MX records found',
                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                     })
                     continue
@@ -402,7 +429,7 @@ class SendEmailsView(APIView):
 
                 timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                 email_statuses.append({
-                    'email': recipient_email,
+                    'email': validated_email,
                     'status': status_message,
                     'timestamp': timestamp,
                     'from_email': smtp_server.username,
@@ -410,7 +437,7 @@ class SendEmailsView(APIView):
                 })
                 EmailStatusLog.objects.create(
                     user=user,
-                    email=recipient_email,
+                    email=validated_email,
                     status=status_message,
                     from_email=smtp_server.username,
                     smtp_server=smtp_server.host,
@@ -421,7 +448,7 @@ class SendEmailsView(APIView):
                     f'email_status_{user_id}',
                     {
                         'type': 'send_status_update',
-                        'email': recipient_email,
+                        'email': validated_email,
                         'status': status_message,
                         'timestamp': timestamp,
                     }
