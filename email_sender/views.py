@@ -358,7 +358,7 @@ class SendEmailsView(APIView):
                     failed_sends += 1
                     email_statuses.append({
                         'email': recipient_email,
-                        'status': f'Failed to send: {str(e)}',
+                        'status': f'Failed: {str(e)}',
                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                     })
                     continue
@@ -367,7 +367,7 @@ class SendEmailsView(APIView):
                     failed_sends += 1
                     email_statuses.append({
                         'email': validated_email,
-                        'status': 'Failed to send',
+                        'status': 'Failed',
                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
                     })
                     continue
