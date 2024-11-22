@@ -1,9 +1,9 @@
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from email_validator import validate_email, EmailNotValidError
+from email_validator import validate_email,EmailNotValidError
 from validate_email_address import validate_email
-from validate_email_address import EmailNotValidError
+# from validate_email_address import EmailValidationError
 import dns.resolver
 from django.core.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
