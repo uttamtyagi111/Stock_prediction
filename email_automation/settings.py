@@ -69,14 +69,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# import environ
-# import os
 
-# # Initialize environment
-# env = environ.Env()
-# # environ.Env.read_env(os.path.join(BASE_DIR, '.env'))  # Load .env file
-
-# Set Razorpay credentials
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
 RAZORPAY_SECRET_KEY = os.getenv('RAZORPAY_SECRET_KEY')
 
@@ -87,7 +80,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': 'your-secret-key',  # Change this to a secure key
+    'SIGNING_KEY': 'your-secret-key',  
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
@@ -144,10 +137,6 @@ TEMPLATES = [
     },
 ]
 
-
-# WSGI_APPLICATION = 'email_automation.wsgi.application'
-
-
 ASGI_APPLICATION = 'email_automation.asgi.application'
 
 import dj_database_url
@@ -158,21 +147,6 @@ DATABASES = {
 database_url = os.environ.get("DATABASE_URL")
 DATABASES["default"] = dj_database_url.parse(database_url)
 
-# import os
-# from urllib.parse import urlparse
-
-# DATABASE_URL = os.environ.get('DATABASE_URL')
-# url = urlparse(DATABASE_URL)
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'email_automation',
-#         'USER': 'email_automation_user',
-#         'PASSWORD': 'XWLtajp9NVZHZTJ8oLzxxXjR1ZDxjAMz',
-#         'HOST': 'dpg-cs26ubbqf0us73a2j9gg-a',
-#         'PORT': 5432,
-#     }
-# }
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -185,12 +159,6 @@ DATABASES["default"] = dj_database_url.parse(database_url)
 # }
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     },
-# }
 
 DATABASE_ROUTERS = ['authentication.database_router.DatabaseRouter']
 
@@ -214,7 +182,6 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Added S3 configuration
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')

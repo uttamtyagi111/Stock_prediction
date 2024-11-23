@@ -3,8 +3,7 @@ from .models import  SMTPServer,UploadedFile,EmailStatusLog
 
 @admin.register(UploadedFile)
 class UploadedFileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_id', 'name', 'file_url')  # Display the ID, name, file URL, and user
-
+    list_display = ('id', 'user_id', 'name', 'file_url')
 
 @admin.register(SMTPServer)
 class SMTPServerAdmin(admin.ModelAdmin):

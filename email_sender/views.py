@@ -2,8 +2,6 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from email_validator import validate_email,EmailNotValidError
-# from validate_email_address import validate_email
-# from validate_email_address import EmailValidationError
 import dns.resolver
 from django.core.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -110,7 +108,6 @@ class UploadHTMLToS3(APIView):
                 return Response({'error': 'File must be an HTML file.'}, status=status.HTTP_400_BAD_REQUEST)
             html_content = file.read()  
         
-        # Check if raw HTML content is provided
         elif 'html_content' in request.data:
             html_content = request.data.get('html_content')
             if not isinstance(html_content, str):
@@ -204,7 +201,6 @@ class UpdateUploadedFile(APIView):
                 counter += 1
             except s3.exceptions.ClientError:
                 break
-        
 
         try:
             s3.put_object(
@@ -216,9 +212,8 @@ class UpdateUploadedFile(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Update the uploaded file record in the database
         uploaded_file.name = new_file_name
-        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_file_name}"  # Assuming you have this field in your model
+        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_file_name}"  
         uploaded_file.save()
 
         return Response({'file_name': new_file_name, 'file_url': uploaded_file.file_url}, status=status.HTTP_200_OK)
@@ -287,8 +282,7 @@ class SendEmailsView(APIView):
         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
         
         if email_limit != 0 and profile.emails_sent >= email_limit:
-            # Update plan status to expired for trial users or plans with limited emails
-            if profile.current_plan is None:  # Trial users
+            if profile.current_plan is None:  
                 profile.plan_status = 'expired'
                 profile.save()
                 return Response(
@@ -480,8 +474,7 @@ class SendEmailsView(APIView):
                     from_email=smtp_server.username,
                     smtp_server=smtp_server.host,
                 )
-
-                # Update WebSocket status
+                
                 async_to_sync(channel_layer.group_send)(
                     f'email_status_{user_id}',
                     {
@@ -507,405 +500,6 @@ class SendEmailsView(APIView):
 
 
 
-# from email_validator import validate_email, EmailNotValidError
-# import dns.resolver
-# from django.core.mail import EmailMessage, get_connection
-# from django.utils import timezone
-# from django.template import Template, Context
-# import time
-# import csv
-# from io import StringIO
-# import logging
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework import status
-
-logger = logging.getLogger(__name__)
-
-
-# class SendEmailsView(APIView):
-#     DEFAULT_EMAIL_LIMIT = 10
-
-#     def get_html_content_from_s3(self, uploaded_file_key):
-#         """Fetches HTML content from S3 based on the file key provided."""
-#         try:
-#             s3 = boto3.client(
-#                 's3',
-#                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-#                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-#                 region_name=settings.AWS_S3_REGION_NAME
-#             )
-#             s3_object = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=uploaded_file_key)
-#             return s3_object['Body'].read().decode('utf-8')
-#         except Exception as e:
-#             logger.error(f"Error fetching file from S3: {str(e)}")
-#             raise
-
-#     def validate_email_domain(self, email):
-#         """Validate if the email domain has valid MX records."""
-#         domain = email.split('@')[-1]
-#         try:
-#             dns.resolver.resolve(domain, 'MX')
-#             return True
-#         except dns.resolver.NoAnswer:
-#             return False
-#         except dns.resolver.NXDOMAIN:
-#             return False
-#         except Exception as e:
-#             logger.error(f"DNS lookup failed for domain {domain}: {str(e)}")
-#             return False
-
-#     def post(self, request, *args, **kwargs):
-#         user = request.user
-#         profile, created = UserProfile.objects.get_or_create(user=user)
-
-#         # Check email sending limits
-#         can_send, message = profile.can_send_email()
-#         if not can_send:
-#             return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
-
-#         if profile.plan_status == 'expired':
-#             return Response({'error': 'Your Trial is expired. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
-
-#         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
-#         if email_limit != 0 and profile.emails_sent >= email_limit:
-#             # Update plan status to expired for trial users or plans with limited emails
-#             if profile.current_plan is None:  # Trial users
-#                 profile.plan_status = 'expired'
-#                 profile.save()
-#                 return Response(
-#                     {'error': 'Trial limit exceeded. Please subscribe to a plan to continue.'},
-#                     status=status.HTTP_403_FORBIDDEN
-#                 )
-#             return Response(
-#                 {'error': 'Email limit exceeded. Please upgrade your plan to continue.'},
-#                 status=status.HTTP_403_FORBIDDEN
-#             )
-
-#         serializer = EmailSendSerializer(data=request.data)
-#         if serializer.is_valid():
-#             smtp_server_ids = serializer.validated_data['smtp_server_ids']
-#             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
-#             subject = serializer.validated_data.get('subject')
-#             uploaded_file_key = serializer.validated_data['uploaded_file_key']
-#             display_name = serializer.validated_data['display_name']
-#             user_id = request.user.id
-
-#             try:
-#                 file_content = self.get_html_content_from_s3(uploaded_file_key)
-#             except Exception as e:
-#                 return Response({'error': f'Error fetching file from S3: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#             # Process email list from uploaded CSV file
-#             email_list_file = request.FILES.get('email_list')
-#             if not email_list_file:
-#                 return Response({'error': 'No email list file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#             email_list = []
-#             try:
-#                 csv_file = email_list_file.read().decode('utf-8')
-#                 csv_reader = csv.DictReader(StringIO(csv_file))
-#                 for row in csv_reader:
-#                     email_list.append(row)
-#             except Exception as e:
-#                 logger.error(f"Error processing email list: {str(e)}")
-#                 return Response({'error': 'Error processing the email list.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#             total_emails = len(email_list)
-#             successful_sends = 0
-#             failed_sends = 0
-#             email_statuses = []
-#             channel_layer = get_channel_layer()
-#             smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
-#             num_smtp_servers = len(smtp_servers)
-
-#             for i, recipient in enumerate(email_list):
-#                 # Check email sending limits
-#                 if email_limit != 0 and profile.emails_sent >= email_limit:
-#                     for remaining_recipient in email_list[i:]:
-#                         failed_sends += 1
-#                         email_statuses.append({
-#                             'email': remaining_recipient.get('Email'),
-#                             'status': 'Failed: Email limit exceeded',
-#                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
-#                         })
-#                     break
-
-#                 recipient_email = recipient.get('Email')
-                
-#                 # Validate email format and domain
-#                 try:
-#                     validated_email = validate_email(recipient_email).email
-#                 except EmailNotValidError as e:
-#                     failed_sends += 1
-#                     email_statuses.append({
-#                         'email': recipient_email,
-#                         'status': f'Invalid email address: {str(e)}',
-#                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
-#                     })
-#                     continue
-
-#                 if not self.validate_email_domain(validated_email):
-#                     failed_sends += 1
-#                     email_statuses.append({
-#                         'email': validated_email,
-#                         'status': 'Invalid email domain or no MX records found',
-#                         'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
-#                     })
-#                     continue
-
-#                 # Render email content
-#                 context = {
-#                     'firstName': recipient.get('firstName'),
-#                     'lastName': recipient.get('lastName'),
-#                     'companyName': recipient.get('companyName'),
-#                     'display_name': display_name,
-#                 }
-#                 try:
-#                     template = Template(file_content)
-#                     context_data = Context(context)
-#                     email_content = template.render(context_data)
-#                 except Exception as e:
-#                     logger.error(f"Error formatting email content: {str(e)}")
-#                     async_to_sync(channel_layer.group_send)(
-#                         f'email_status_{user_id}',  # Send the message to the specific user's WebSocket group
-#                         {
-#                             'type': 'send_status_update',
-#                             'email': recipient_email,
-#                             'status': f'Error formatting email content: {str(e)}',
-#                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
-#                         }
-#                     )
-#                     return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#                 smtp_server = smtp_servers[i % num_smtp_servers]
-#                 email = EmailMessage(
-#                     subject=subject,
-#                     body=email_content,
-#                     from_email=f'{display_name} <{smtp_server.username}>',
-#                     to=[recipient_email]
-#                 )
-#                 email.content_subtype = 'html'
-
-#                 try:
-#                     connection = get_connection(
-#                         backend='django.core.mail.backends.smtp.EmailBackend',
-#                         host=smtp_server.host,
-#                         port=smtp_server.port,
-#                         username=smtp_server.username,
-#                         password=smtp_server.password,
-#                         use_tls=smtp_server.use_tls,
-#                     )
-#                     email.connection = connection
-#                     email.send()
-#                     status_message = 'Sent successfully'
-#                     successful_sends += 1
-#                     profile.increment_email_count()
-#                     profile.save()
-#                 except Exception as e:
-#                     status_message = f'Failed to send: {str(e)}'
-#                     failed_sends += 1
-#                     logger.error(f"Error sending email to {recipient_email}: {str(e)}")
-
-#                 timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-#                 email_statuses.append({
-#                     'email': validated_email,
-#                     'status': status_message,
-#                     'timestamp': timestamp,
-#                 })
-
-#                 if delay_seconds > 0:
-#                     time.sleep(delay_seconds)
-
-#             return Response({
-#                 'status': 'All emails processed',
-#                 'total_emails': total_emails,
-#                 'successful_sends': successful_sends,
-#                 'failed_sends': failed_sends,
-#                 'email_statuses': email_statuses
-#             }, status=status.HTTP_200_OK)
-
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# class SendEmailsView(APIView):
-#     DEFAULT_EMAIL_LIMIT=10
-    
-#     def get_html_content_from_s3(self, uploaded_file_key):
-#         try:
-#             s3 = boto3.client(
-#                 's3',
-#                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-#                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-#                 region_name=settings.AWS_S3_REGION_NAME
-#             )
-
-#             s3_object = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=uploaded_file_key)
-#             return s3_object['Body'].read().decode('utf-8')
-#         except Exception as e:
-#             logger.error(f"Error fetching file from S3: {str(e)}")
-#             raise
-#     def post(self, request, *args, **kwargs):
-#         user = request.user
-#         profile, created = UserProfile.objects.get_or_create(user=user)
-        
-#         can_send, message = profile.can_send_email()
-#         if not can_send:
-#             return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
-#             #         # Check if the user's plan status is active and if they have not exceeded their email limit
-#         if profile.plan_status == 'expired':
-#             return Response({'error': 'Your account is inactive. Please select a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
-        
-#         # Determine the email limit, using a default if the current_plan is None
-#         email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
-
-#         # Check if the user has exceeded their email limit
-#         if profile.emails_sent >= email_limit:
-#             profile.plan_status = 'expired'  # Mark the plan as expired
-#             profile.save()  # Save the updated status
-#             return Response(
-#                 {'error': 'Email limit exceeded. Please select a plan to continue.'},
-#                 status=status.HTTP_403_FORBIDDEN
-#             )
-            
-#         serializer = EmailSendSerializer(data=request.data)
-#         if serializer.is_valid():
-#             smtp_server_ids = serializer.validated_data['smtp_server_ids']
-#             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
-#             subject = serializer.validated_data.get('subject')
-#             uploaded_file_key = serializer.validated_data['uploaded_file_key'] 
-            
-#             # Get the logged-in user's ID
-#             user_id = request.user.id
-#             user = request.user
-
-#             # Get the HTML content from S3
-#             try:
-#                 file_content = self.get_html_content_from_s3(uploaded_file_key)
-#             except Exception as e:
-#                 return Response({'error': f'Error fetching file from S3: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-#             # Email list CSV file handling (unchanged)
-#             email_list_file = request.FILES.get('email_list')
-#             if not email_list_file:
-#                 return Response({'error': 'No email list file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#             email_list = []
-#             try:
-#                 csv_file = email_list_file.read().decode('utf-8')
-#                 csv_reader = csv.DictReader(StringIO(csv_file))
-#                 for row in csv_reader:
-#                     email_list.append(row)
-#             except Exception as e:
-#                 logger.error(f"Error processing email list: {str(e)}")
-#                 return Response({'error': 'Error processing the email list.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#             total_emails = len(email_list)
-#             successful_sends = 0
-#             failed_sends = 0
-#             email_statuses = []
-
-#             # Get the channel layer for WebSocket communication
-#             channel_layer = get_channel_layer()
-            
-#             smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
-#             num_smtp_servers = len(smtp_servers)
-
-#             for i, recipient in enumerate(email_list):
-#                 recipient_email = recipient.get('Email')
-#                 context = {
-#                     'firstName': recipient.get('firstName'),
-#                     'lastName': recipient.get('lastName'),
-#                     'companyName': recipient.get('companyName'),
-#                     'display_name': serializer.validated_data['display_name'],
-#                 }
-
-#                 try:
-#                     template = Template(file_content)
-#                     context_data = Context(context)  
-#                     email_content = template.render(context_data)
-#                 except Exception as e:
-#                     logger.error(f"Error formatting email content: {str(e)}")
-#                     async_to_sync(channel_layer.group_send)(
-#                         f'email_status_{user_id}',  # Send the message to the specific user's WebSocket group
-#                         {
-#                             'type': 'send_status_update',
-#                             'email': recipient_email,
-#                             'status': f'Error formatting email content: {str(e)}',
-#                             'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
-#                         }
-#                     )
-#                     return Response({'error': f'Error formatting email content: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#                 smtp_server = smtp_servers[i % num_smtp_servers]
-
-#                 email = EmailMessage(
-#                     subject=subject,
-#                     body=email_content,
-#                     from_email=f'{serializer.validated_data["display_name"]} <{smtp_server.username}>',
-#                     to=[recipient_email]
-#                 )
-#                 email.content_subtype = 'html'
-
-#                 try:
-#                     connection = get_connection(
-#                         backend='django.core.mail.backends.smtp.EmailBackend',
-#                         host=smtp_server.host,
-#                         port=smtp_server.port,
-#                         username=smtp_server.username,
-#                         password=smtp_server.password,
-#                         use_tls=smtp_server.use_tls,
-#                     )
-#                     email.connection = connection
-#                     email.send()
-#                     status_message = 'Sent successfully'
-#                     successful_sends += 1
-#                     profile.increment_email_count()
-#                     profile.save()
-#                 except Exception as e:
-#                     status_message = f'Failed to send: {str(e)}'
-#                     failed_sends += 1
-#                     logger.error(f"Error sending email to {recipient_email}: {str(e)}")
-
-#                 timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-
-#                 email_statuses.append({
-#                     'email': recipient_email,
-#                     'status': status_message,
-#                     'timestamp': timestamp,
-#                     'from_email': smtp_server.username,
-#                     'smtp_server': smtp_server.host,
-#                 })
-#                 EmailStatusLog.objects.create(
-#                     user=user,
-#                     email=recipient_email,
-#                     status=status_message,
-#                     from_email=smtp_server.username,
-#                     smtp_server=smtp_server.host,
-#                 )
-
-#                 # Send the status update to the logged-in user's WebSocket group
-#                 async_to_sync(channel_layer.group_send)(
-#                     f'email_status_{user_id}',  # Send to specific user's group
-#                     {
-#                         'type': 'send_status_update',
-#                         'email': recipient_email,
-#                         'status': status_message,
-#                         'timestamp': timestamp,
-#                     }
-#                 )
-
-#                 if delay_seconds > 0:
-#                     time.sleep(delay_seconds) 
-
-#             return Response({
-#                 'status': 'All emails processed',
-#                 'total_emails': total_emails,
-#                 'successful_sends': successful_sends,
-#                 'failed_sends': failed_sends,
-#                 'email_statuses': email_statuses
-#             }, status=status.HTTP_200_OK)
-
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class EmailStatusAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]

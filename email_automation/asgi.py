@@ -10,10 +10,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'email_automation.settings')
 
 django.setup()
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),  # Django's ASGI application for HTTP
+    "http": get_asgi_application(), 
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            routing.websocket_urlpatterns  # WebSocket routing
+            routing.websocket_urlpatterns 
         )
     ),
 })

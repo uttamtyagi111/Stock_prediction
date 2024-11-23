@@ -27,11 +27,6 @@ class EmailSendSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         write_only=True
     )
-    # your_name = serializers.CharField()
-    # your_company = serializers.CharField()
-    # your_email = serializers.EmailField()
-    # contact_info = serializers.CharField()
-    # website_url = serializers.URLField()
     display_name = serializers.CharField()
     subject = serializers.CharField(max_length=255) 
     delay_seconds = serializers.IntegerField(required=False, default=0) 

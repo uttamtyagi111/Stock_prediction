@@ -48,42 +48,6 @@ class ProtectedView(APIView):
 class CustomTokenRefreshView(TokenRefreshView):
     pass
 
-logger = logging.getLogger(__name__)
-# from .utils import get_system_info
-    # @api_view(['GET'])
-    # @permission_classes([AllowAny])
-    # def system_info_view(request):
-    #     info = get_system_info()
-    #     return Response(info)
-
-    # def get_system_info():
-    #     try:
-    #         command = "wmic csproduct get name, identifyingnumber"
-    #         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-            
-    #         if result.returncode == 0:
-    #             output_lines = result.stdout.strip().split("\n")
-
-    #             output_lines = [line.strip() for line in output_lines if line.strip()]
-
-    #             if len(output_lines) >= 2:
-    #                 headers = output_lines[0].split() 
-    #                 values = output_lines[1].split(maxsplit=1) 
-
-    #                 system_info = {
-    #                     "IdentifyingNumber": values[0],
-    #                     "Name": values[1] if len(values) > 1 else None
-    #                 }
-    #             else:
-    #                 system_info = {"error": "Unexpected command output"}
-
-    #             return system_info
-    #         else:
-    #             return {"error": result.stderr}
-    #     except Exception as e:
-    #         return {"error": str(e)}
-
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -144,7 +108,7 @@ def loginPage(request):
     except UserProfile.DoesNotExist:
         return Response({'message': 'User profile not found.'}, status=400)
     
-    plan_name = getattr(user_profile.plan_name, 'name', None)  # Assuming `plan` is a ForeignKey in UserProfile
+    plan_name = getattr(user_profile.plan_name, 'name', None)  
     if not plan_name or plan_name.lower() == "basic":
         device_limit = 1
     elif plan_name.lower() == "premium":
@@ -152,36 +116,32 @@ def loginPage(request):
     else:
         return Response({'message': 'Invalid plan name.'}, status=400)
 
-    # Get system_info from request data (frontend should send this)
     system_info = request.data.get('system_info')
     if not system_info:
         return Response({'message': 'System info is required.'}, status=400)
 
-    # system_info = json.loads(system_info)
 
-    # Check if the user has exceeded the device limit
     if not check_device_limit(user_profile, system_info,device_limit):
         return Response({
             'message': f'Device limit exceeded. You can only log in on {device_limit} device(s). Please log out from other devices to log in.',
             'logged_in_devices': logged_in_devices(user_profile)
         }, status=200)
 
-    # Generate JWT tokens
+
     refresh = RefreshToken.for_user(user)
     access_token = str(refresh.access_token)
     refresh_token = str(refresh)
 
-    # Save the device info and token in the database
     existing_devices = UserDevice.objects.filter(user=user_profile.user)
     device_count = existing_devices.count()
     
-    # Generate a unique device name, e.g., "device1", "device2", "device3"
+
     device_name = f"device{device_count + 1}"
     user_device = UserDevice.objects.create(
         user=user,
         device_name=device_name,
-        system_info=system_info,  # Save system info for future reference
-        token = refresh_token  # Save token for future logout functionality
+        system_info=system_info, 
+        token = refresh_token  
     )
 
     return Response({
@@ -242,100 +202,6 @@ class LogoutDeviceView(APIView):
 
 
 
-
-
-# @api_view(['POST'])
-# @permission_classes([AllowAny])  # Adjust permissions if you need authentication
-# def logout_device(request):
-#     email = request.data.get('email')
-#     password = request.data.get('password') 
-#     device_name = request.data.get('device_name')
-#     device_id = request.data.get('device_id') 
-#     system_info = request.data.get('system_info') 
-    
-#     # Check if all required data is present
-#     if email and password and device_name and device_id:
-#         # Authenticate the user with email and password
-#         user = authenticate(request, email=email, password=password)
-        
-#         if user is None:
-#             return Response({'message': 'Invalid credentials.'}, status=400)
-        
-#         try:
-#             # Check if the user's profile and device exist
-#             user_profile = UserProfile.objects.get(user=user)
-#             user_device = UserDevice.objects.get(user=user_profile.user, id=user_device.id)
-            
-#             # Delete the existing device entry and blacklist the token
-#             refresh_token = user_device.token
-#             token = RefreshToken(refresh_token)
-#             user_device.delete()
-#             token.blacklist()
-
-#             # Create new tokens for the user
-#             refresh = RefreshToken.for_user(user)
-#             access_token = str(refresh.access_token)
-#             refresh_token = str(refresh)
-
-#             # Save the device info and token in the database
-#             UserDevice.objects.create(
-#                 user=user,
-#                 device_name=device_name,
-#                 device_id=device_id,
-#                 system_info=system_info,
-#                 token=refresh_token  # Store the refresh token
-#             )
-
-#             return Response({
-#                 'user_id': user.id,
-#                 'access': access_token,
-#                 'refresh': refresh_token,
-#                 'system_info': system_info,
-#                 'redirect': 'home',
-#                 'message': 'Login successful'
-#             }, status=200)
-
-#         except UserProfile.DoesNotExist:
-#             return Response({'message': 'User profile not found.'}, status=400)
-#         except UserDevice.DoesNotExist:
-#             return Response({'message': 'Device not found.'}, status=400)
-
-#     # If any required field is missing
-#     return Response({'message': 'Invalid request data.'}, status=400)
-    
-
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])  # Ensure the user is authenticated for logout
-# def logout_view(request):
-#     device_name = request.data.get('device_name')
-#     device_id = request.data.get('device_id')  # This will be the 'id' field in UserDevice model
-
-#     if not device_name:
-#         return Response({'message': 'Device name is required.'}, status=400)
-#     if not device_id:
-#         return Response({'message': 'Device ID is required.'}, status=400)
-
-#     try:
-#         # Find the UserDevice instance by user, device name, and device ID (using 'id' field)
-#         user_device = UserDevice.objects.get(user=request.user, device_name=device_name, id=device_id)
-#     except UserDevice.DoesNotExist:
-#         return Response({'message': 'Device not found.'}, status=400)
-
-#     # Blacklist the refresh token associated with this device to ensure logout
-#     refresh_token = user_device.token
-#     token = RefreshToken(refresh_token)
-#     token.blacklist()
-
-#     # Delete the device record from the database
-#     user_device.delete()
-
-#     return Response({'message': 'Device logged out successfully.'})
-
-
-
-
-
 def check_device_limit(user_profile, system_info,device_limit):
     """
     Checks if the user has exceeded the allowed device limit.
@@ -366,40 +232,6 @@ def logged_in_devices(user_profile):
     return devices_info
 
 
-
-
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def logout_view(request):
-#     try:
-
-#         refresh_token = request.data.get('refresh')
-#         device_id = request.data.get('device_id')
-
-#         if not refresh_token:
-#             return Response({'message': 'Refresh token is required.'}, status=400)
-#         if not device_id:
-#             return Response({'message': 'Device ID is required.'}, status=400)
-
-
-#         token = RefreshToken(refresh_token)
-#         token.blacklist()
-
-#         device = get_object_or_404(UserDevice, id=device_id)
-
-#         if device.user != request.user:
-#             return Response({'message': 'You do not have permission to delete this device.'}, status=403)
-
-#         device.delete()
-
-#         return Response({'message': 'Logout successful and device removed.'}, status=200)
-
-#     except InvalidToken:
-#         return Response({'message': 'Invalid token'}, status=400)
-#     except Exception as e:
-#         return Response({'message': f'Error: {str(e)}'}, status=500)
-    
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -551,80 +383,6 @@ def verify_otp(request):
     return Response({'form_valid': form.is_valid(), 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class ProtectedView(APIView):
-#     authentication_classes = [JWTAuthentication]
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-#         return Response({"message": "This is a protected view."})
-
-# class CustomTokenRefreshView(TokenRefreshView):
-#     pass
-
-# logger = logging.getLogger(__name__)
-
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def loginPage(request):
-#     logout(request)
-#     # print("Request received:", request.data) 
-    
-#     form = EmailLoginForm(request.data or None)
-    
-#     if form.is_valid():
-#         email = form.cleaned_data['email']
-#         password = form.cleaned_data['password']
-#         # print(f"Email: {email}, Password: {password}") 
-#         print(f"Attempting login with email: {email}") 
-        
-#         user = authenticate(request, email=email, password=password)
-#         # print(f"User: {user}") 
-#         print(f"Authenticated user: {user}")
-        
-#         if user:
-#             if user.is_active:
-#                 django_login(request, user)
-#                 refresh = RefreshToken.for_user(user)
-#                 print(f"Logged-in user: {user.username} (ID: {user.id})")
-#                 return JsonResponse({
-#                     'user_id': user.id,
-#                     'access': str(refresh.access_token),
-#                     'refresh': str(refresh),
-#                     'redirect': 'home',
-#                     'message': 'Login successful'
-#                 })
-#             else:
-#                 return JsonResponse({'message': 'Account is inactive.'}, status=400)
-#         else:
-#             return JsonResponse({
-#                 'message': 'Email or password is incorrect.'
-#             }, status=400)
-    
-#     return JsonResponse({
-#         'form_valid': form.is_valid(),
-#         'errors': form.errors
-#     }, status=400)
-
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def logout_view(request):
-#     try:
-#         refresh_token = request.data.get('refresh')
-
-#         if not refresh_token:
-#             return JsonResponse({'message': 'Refresh token is required.'}, status=400)
-        
-#         token = RefreshToken(refresh_token)
-
-#         token.blacklist()
-
-#         return JsonResponse({'message': 'Logout successful'}, status=200)
-#     except InvalidToken:
-#         return JsonResponse({'message': 'Invalid token'}, status=400)
-
-
-
 
 def user_list(request):
     users = User.objects.all()
@@ -655,6 +413,7 @@ def request_password_reset(request):
             return Response({'errors': {'email': ['No user found with this email address.']}}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({'form_valid': form.is_valid(), 'errors': form.errors}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST', 'GET'])
 @permission_classes([AllowAny])
