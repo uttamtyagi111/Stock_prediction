@@ -248,18 +248,30 @@ LOGGING = {
 }
 
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
-
 # CHANNEL_LAYERS = {
 #     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             "hosts": [("127.0.0.1", 6379)],
-#             # "password": "your_redis_password", 
-#         },
+#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
 #     },
 # }
+
+import os
+from urllib.parse import urlparse
+
+# Fetch the Redis URL from the environment variable
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')  # Default to localhost for local development
+
+# Parse the Redis URL
+url = urlparse(redis_url)
+
+# Configure Channels to use Redis
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(url.hostname, url.port, {
+                # 'password': url.password,  # No password in your case, so this should be None
+                'db': 0  # Default Redis DB
+            })],
+        },
+    },
+}
