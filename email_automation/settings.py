@@ -139,24 +139,24 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'email_automation.asgi.application'
 
-import dj_database_url
-DATABASES = {
-    'default': {}
-}
-
-database_url = os.environ.get("DATABASE_URL")
-DATABASES["default"] = dj_database_url.parse(database_url)
-
+# import dj_database_url
 # DATABASES = {
-#     'default': {
-#         'ENGINE': os.getenv('DB_ENGINE'),
-#         'NAME': os.getenv('DB_NAME'),        
-#         'USER': os.getenv('DB_USER'),        
-#         'PASSWORD': os.getenv('DB_PASSWORD'), 
-#         'HOST': os.getenv('DB_HOST'),        
-#         'PORT': '',        
-#     }
+#     'default': {}
 # }
+
+# database_url = os.environ.get("DATABASE_URL")
+# DATABASES["default"] = dj_database_url.parse(database_url)
+
+DATABASES = {
+    'default': {
+        'ENGINE': os.getenv('DB_ENGINE'),
+        'NAME': os.getenv('DB_NAME'),        
+        'USER': os.getenv('DB_USER'),        
+        'PASSWORD': os.getenv('DB_PASSWORD'), 
+        'HOST': os.getenv('DB_HOST'),        
+        'PORT': '',        
+    }
+}
 
 
 
@@ -254,24 +254,32 @@ LOGGING = {
 #     },
 # }
 
-import os
-from urllib.parse import urlparse
+# import os
+# from urllib.parse import urlparse
 
-# Fetch the Redis URL from the environment variable
-redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')  # Default to localhost for local development
+# # Fetch the Redis URL from the environment variable
+# redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')  # Default to localhost for local development
 
-# Parse the Redis URL
-url = urlparse(redis_url)
+# # Parse the Redis URL
+# url = urlparse(redis_url)
 
 # Configure Channels to use Redis
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             'hosts': [(url.hostname, url.port, {
+#                 # 'password': url.password,  # No password in your case, so this should be None
+#                 'db': 0  # Default Redis DB
+#             })],
+#         },
+#     },
+# }
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(url.hostname, url.port, {
-                # 'password': url.password,  # No password in your case, so this should be None
-                'db': 0  # Default Redis DB
-            })],
+            'hosts': [('127.0.0.1', 6379)],
         },
     },
 }
