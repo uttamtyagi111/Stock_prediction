@@ -27,9 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*','https://email-automation-mocha.vercel.app', ]
 
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
-# SECURE_SSL_REDIRECT = True
+
+### esko production par uncomment krna h 
+###### render wale me eski jrurt nahi hai 
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
 
 CSRF_TRUSTED_ORIGINS = [
     'https://django-api-aqlo.onrender.com',
@@ -139,24 +142,27 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'email_automation.asgi.application'
 
-# import dj_database_url
-# DATABASES = {
-#     'default': {}
-# }
 
-# database_url = os.environ.get("DATABASE_URL")
-# DATABASES["default"] = dj_database_url.parse(database_url)
 
+##### ye wala DB use krna h render wale server per to esko uncomment krke niche vale ko comment krke deploy krna h  
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': os.getenv('DB_ENGINE'),
-        'NAME': os.getenv('DB_NAME'),        
-        'USER': os.getenv('DB_USER'),        
-        'PASSWORD': os.getenv('DB_PASSWORD'), 
-        'HOST': os.getenv('DB_HOST'),        
-        'PORT': '',        
-    }
+    'default': {}
 }
+
+database_url = os.environ.get("DATABASE_URL")
+DATABASES["default"] = dj_database_url.parse(database_url)
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': os.getenv('DB_ENGINE'),
+#         'NAME': os.getenv('DB_NAME'),        
+#         'USER': os.getenv('DB_USER'),        
+#         'PASSWORD': os.getenv('DB_PASSWORD'), 
+#         'HOST': os.getenv('DB_HOST'),        
+#         'PORT': '',        
+#     }
+# }
 
 
 
