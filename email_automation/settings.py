@@ -222,19 +222,19 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-# class SSLDisableContext:
-#     def __enter__(self):
-#         self.ssl_context = ssl._create_unverified_context()
-#         self.original_get_connection = get_connection
+class SSLDisableContext:
+    def __enter__(self):
+        self.ssl_context = ssl._create_unverified_context()
+        self.original_get_connection = get_connection
 
-#         def get_connection(backend=None, fail_silently=False, **kwargs):
-#             return self.original_get_connection(backend, fail_silently, ssl_context=self.ssl_context, **kwargs)
+        def get_connection(backend=None, fail_silently=False, **kwargs):
+            return self.original_get_connection(backend, fail_silently, ssl_context=self.ssl_context, **kwargs)
 
-#         EmailMessage.get_connection = staticmethod(get_connection)
+        EmailMessage.get_connection = staticmethod(get_connection)
 
-#     def __exit__(self, exc_type, exc_value, traceback):
-#         EmailMessage.get_connection = staticmethod(self.original_get_connection)
-# SSLDisableContext()
+    def __exit__(self, exc_type, exc_value, traceback):
+        EmailMessage.get_connection = staticmethod(self.original_get_connection)
+SSLDisableContext()
 
 LOGGING = {
     'version': 1,
