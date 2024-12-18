@@ -30,7 +30,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*','https://email-a
 
 ### esko production par uncomment krna h 
 ###### render wale me eski jrurt nahi hai 
-SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
 # SECURE_SSL_REDIRECT = True
 
