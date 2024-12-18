@@ -145,24 +145,24 @@ ASGI_APPLICATION = 'email_automation.asgi.application'
 
 
 ##### ye wala DB use krna h render wale server per to esko uncomment krke niche vale ko comment krke deploy krna h  
-# import dj_database_url
-# DATABASES = {
-#     'default': {}
-# }
-
-# database_url = os.environ.get("DATABASE_URL")
-# DATABASES["default"] = dj_database_url.parse(database_url)
-
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': os.getenv('DB_ENGINE'),
-        'NAME': os.getenv('DB_NAME'),        
-        'USER': os.getenv('DB_USER'),        
-        'PASSWORD': os.getenv('DB_PASSWORD'), 
-        'HOST': os.getenv('DB_HOST'),        
-        'PORT': '',        
-    }
+    'default': {}
 }
+
+database_url = os.environ.get("DATABASE_URL")
+DATABASES["default"] = dj_database_url.parse(database_url)
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': os.getenv('DB_ENGINE'),
+#         'NAME': os.getenv('DB_NAME'),        
+#         'USER': os.getenv('DB_USER'),        
+#         'PASSWORD': os.getenv('DB_PASSWORD'), 
+#         'HOST': os.getenv('DB_HOST'),        
+#         'PORT': '',        
+#     }
+# }
 
 
 
@@ -254,11 +254,11 @@ LOGGING = {
 }
 
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
+#     },
+# }
 
 # import os
 # from urllib.parse import urlparse
@@ -281,11 +281,11 @@ CHANNEL_LAYERS = {
 #         },
 #     },
 # }
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             'hosts': [('127.0.0.1', 6379)],
-#         },
-#     },
-# }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
