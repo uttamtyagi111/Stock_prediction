@@ -37,7 +37,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*','https://email-a
 CSRF_TRUSTED_ORIGINS = [
     'https://django-api-aqlo.onrender.com',
     'http://208.87.134.149',
-    'https://backend.wishgeeksdigital.com/',   
+    'https://backend.wishgeeksdigital.com',   
 ]
 
 
