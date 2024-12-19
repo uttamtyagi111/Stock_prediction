@@ -254,11 +254,11 @@ LOGGING = {
 }
 
 
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
-#     },
-# }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # import os
 # from urllib.parse import urlparse
@@ -283,13 +283,13 @@ LOGGING = {
 # }
 
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [
-                'redis://:admin@123@0.0.0.0:6379',
-            ],
-        },
-    },
-}
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             'hosts': [
+#                 'redis://:admin@123@0.0.0.0:6379',
+#             ],
+#         },
+#     },
+# }
