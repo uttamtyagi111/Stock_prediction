@@ -31,7 +31,8 @@ ALLOWED_HOSTS = [
     '208.87.134.149',
     'email-automation-mocha.vercel.app',
     'backend.wishgeeksdigital.com',
-    'www.wishgeeksdigital.com'
+    'www.wishgeeksdigital.com',
+    'django-api-aqlo.onrender.com'
 ]
 
 
