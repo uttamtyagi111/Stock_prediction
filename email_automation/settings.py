@@ -25,7 +25,15 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '208.87.134.149','*','https://email-automation-mocha.vercel.app', ]
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '208.87.134.149',
+    'email-automation-mocha.vercel.app',
+    'backend.wishgeeksdigital.com',
+    'www.wishgeeksdigital.com'
+]
+
 
 
 ### esko production par uncomment krna h 
