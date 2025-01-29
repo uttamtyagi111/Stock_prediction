@@ -85,6 +85,10 @@ REST_FRAMEWORK = {
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
 RAZORPAY_SECRET_KEY = os.getenv('RAZORPAY_SECRET_KEY')
 
+VERIFY_URL = os.getenv('VERIFY_URL')
+MERCHANT_ID = os.getenv('MERCHANT_ID')
+PHONEPE_URL = os.getenv('PHONEPE_URL')
+SALT_KEY = os.getenv('SALT_KEY')
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -223,13 +227,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'mail.wishgeeks.com'
+EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 # EMAIL_USE_SSL = False  # Commented out as not used
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 class SSLDisableContext:
     def __enter__(self):
