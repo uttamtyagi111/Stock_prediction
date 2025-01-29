@@ -28,7 +28,7 @@ from .utils import send_password_reset_email
 from subscriptions.models import UserProfile, UserDevice
 import random,logging,subprocess
 from django.shortcuts import render
-from .utils import generate_otp, send_otp_email 
+from .utils import generate_otp, send_otp_email ,send_welcome_email
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -108,11 +108,22 @@ def loginPage(request):
     except UserProfile.DoesNotExist:
         return Response({'message': 'User profile not found.'}, status=400)
     
-    plan_name = getattr(user_profile.plan_name, 'name', None)  
+    plan_name = getattr(user_profile.current_plan, 'name', None)
+
+    if plan_name:
+        print(f"Plan Name: {plan_name}")
+    else:
+        print("No plan associated with this user.")  
+    print(plan_name)
     if not plan_name or plan_name.lower() == "basic":
         device_limit = 1
-    elif plan_name.lower() == "premium":
+    elif plan_name.lower() == "standard":
         device_limit = 3
+    elif plan_name.lower() == "premium":
+        device_limit = 5
+    elif plan_name.lower() == "elite":
+        device_limit = 15
+
     else:
         return Response({'message': 'Invalid plan name.'}, status=400)
 
@@ -123,7 +134,7 @@ def loginPage(request):
 
     if not check_device_limit(user_profile, system_info,device_limit):
         return Response({
-            'message': f'Device limit exceeded. You can only log in on {device_limit} device(s). Please log out from other devices to log in.',
+            'message': f'Device limit exceeded. You can only log in on {device_limit} device(s) based on your {plan_name} plan. Please log out from other devices to log in.',
             'logged_in_devices': logged_in_devices(user_profile)
         }, status=200)
 
@@ -380,6 +391,7 @@ def verify_otp(request):
                     user.is_active = True
                     user.set_password(user_data['password'])  
                     user.save()
+                    send_welcome_email(user)
                     
                 cache.delete(f'otp_{request.data.get("email")}')
                 cache.delete(f'register_data_{request.data.get("email")}')

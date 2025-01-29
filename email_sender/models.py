@@ -34,3 +34,49 @@ class SMTPServer(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+class ContactFile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contact_files')
+    name = models.CharField(max_length=255, help_text="User-defined name for the contact file")
+    file = models.FileField(upload_to='contact_files/', help_text="Uploaded contact file", null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class Contact(models.Model):
+    contact_file = models.ForeignKey(ContactFile, on_delete=models.CASCADE, related_name='contacts')
+    data = models.JSONField(help_text="Data of the CSV row")
+
+    def __str__(self):
+        return f"Row in {self.contact_file.name}"
+        
+
+class Campaign(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='campaigns')
+    name = models.CharField(max_length=255, help_text="Campaign name")
+    subject = models.CharField(max_length=255, help_text="Subject of the campaign")
+    contact_list = models.ForeignKey(ContactFile, on_delete=models.CASCADE, related_name='campaigns', help_text="Contact list associated with the campaign")
+    delay_seconds = models.PositiveIntegerField(help_text="Delay between emails in seconds")
+    smtp_servers = models.ManyToManyField('SMTPServer', related_name='campaigns', help_text="SMTP servers used for the campaign")
+    uploaded_file_key = models.CharField(max_length=255, blank=True, null=True, help_text="Key for the uploaded file")
+    display_name = models.CharField(max_length=255, blank=True, null=True, help_text="Display name for the sender")
+    created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when the campaign was created")
+    updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when the campaign was last updated")
+
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
+
+
+class Unsubscribed(models.Model):
+    email = models.EmailField(help_text="Email of the unsubscribed contact", null=True, blank=True)
+    contact_file_name = models.CharField(
+        max_length=255, help_text="Name of the contact file", null=True, blank=True
+    )
+    unsubscribed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.email} unsubscribed from {self.contact_file_name}"
+
