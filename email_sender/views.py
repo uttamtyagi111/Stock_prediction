@@ -1,3 +1,8 @@
+from rest_framework import serializers
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from datetime import timedelta
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -520,20 +525,10 @@ class EmailStatusAnalyticsView(APIView):
     
     
     
-    
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from datetime import timedelta
-from django.utils import timezone
-from .models import EmailStatusLog  # Assuming the model is in the same app
 
 class EmailStatusByDateRangeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    # Serializer to validate the start and end date
     class DateRangeSerializer(serializers.Serializer):
         start_date = serializers.DateField(required=True)
         end_date = serializers.DateField(required=True)
@@ -542,7 +537,6 @@ class EmailStatusByDateRangeView(APIView):
             start_date = data.get('start_date')
             end_date = data.get('end_date')
 
-            # Ensure the date range is not more than 7 days
             delta = end_date - start_date
             if delta.days > 7:
                 raise ValidationError("The date range cannot be more than 7 days.")
@@ -551,14 +545,12 @@ class EmailStatusByDateRangeView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
 
-        # Validate and parse the date range from the request
         serializer = self.DateRangeSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
         start_date = serializer.validated_data['start_date']
         end_date = serializer.validated_data['end_date']
 
-        # Ensure the end date is not in the future
         today = timezone.now().date()
         if end_date > today:
             raise ValidationError("End date cannot be in the future.")
@@ -566,7 +558,6 @@ class EmailStatusByDateRangeView(APIView):
         if start_date > end_date:
             raise ValidationError("Start date cannot be after end date.")
 
-        # Get the email status data for each day in the specified date range
         successful_sends = []
         failed_sends = []
         labels = []
@@ -575,7 +566,6 @@ class EmailStatusByDateRangeView(APIView):
             day = start_date + timedelta(days=i)
             labels.append(day.strftime('%Y-%m-%d'))
 
-            # Count successful and failed emails for each day
             successful_sends.append(
                 EmailStatusLog.objects.filter(
                     user=user,
@@ -592,7 +582,6 @@ class EmailStatusByDateRangeView(APIView):
                 ).count()
             )
 
-        # Return the data in a format suitable for a bar chart
         analytics_data = {
             'labels': labels,
             'successful_sends': successful_sends,
