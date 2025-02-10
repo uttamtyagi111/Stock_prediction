@@ -114,7 +114,7 @@ def check_and_send_email_notifications():
 def start_scheduler():
     """Start the APScheduler for periodic tasks."""
     scheduler = BackgroundScheduler()
-    scheduler.add_job(check_and_send_email_notifications, 'interval', minutes=15)  # Run every 6 hours
+    scheduler.add_job(check_and_send_email_notifications, 'interval', hours=72)  # Run every 723 hours
     scheduler.start()
     logger.info("Scheduler started successfully.")
     
