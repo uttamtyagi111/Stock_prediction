@@ -716,9 +716,14 @@ def get_2fa_status(request):
     try:
         user_profile = UserProfile.objects.get(user=user)
 
-        return Response({
-            'is_2fa_enabled': user_profile.is_2fa_enabled
-        }, status=status.HTTP_200_OK)
+        if user_profile.is_2fa_enabled:
+            return Response({
+                '2fa_status': 'enabled'
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                '2fa_status': 'disabled'
+            }, status=status.HTTP_200_OK)
 
     except UserProfile.DoesNotExist:
         return Response({'error': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
