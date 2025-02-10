@@ -8,7 +8,7 @@ class Plan(models.Model):
     name = models.CharField(max_length=100)
     email_limit = models.IntegerField(default=20)
     device_limit = models.IntegerField(default=1)
-    duration_days = models.IntegerField(default=30)  
+    duration_days = models.IntegerField(default=14)  
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
     def __str__(self):
@@ -31,14 +31,15 @@ class UserProfile(models.Model):
     plan_expiration_date = models.DateTimeField(default=get_trial_expiration_date,null=True, blank=True)
     current_plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
     pending_plan_id = models.IntegerField(null=True, blank=True)
-    
-    # def save(self, *args, **kwargs):
-    #     # If plan is not None, make sure the plan name is uppercase
-    #     if self.plan:
-    #         self.plan.name = self.plan.name.upper()
-        
-    #     super(UserProfile, self).save(*args, **kwargs)  
-    
+    #for billing address   
+    address_line1 = models.CharField(max_length=255, null=True, blank=True)
+    address_line2 = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    zip_code = models.CharField(max_length=20, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    is_2fa_enabled = models.BooleanField(default=False)  
+
     DEFAULT_TRIAL_LIMIT = 20  
 
     def can_send_email(self):
@@ -56,6 +57,7 @@ class UserProfile(models.Model):
                 return False, "Trial limit exceeded. Please subscribe to a plan."
             
             return True, "You are on a trial; you can send more emails."
+        
         if self.plan_expiration_date <= timezone.now():
             self.plan_status = "expired"
             self.save()

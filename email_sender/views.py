@@ -449,10 +449,14 @@ class CampaignView(APIView):
 
             # Validate the contact file
             try:
-                contact_file = ContactFile.objects.get(id=contact_file_id)
+                contact_file = ContactFile.objects.get(id=contact_file_id,user=request.user)
             except ContactFile.DoesNotExist:
                 return Response({'error': 'Contact file not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+            smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids, user=request.user)
+            if not smtp_servers.exists():
+                return Response({'error': 'Selected SMTP servers not found or do not belong to the user.'}, 
+                                status=status.HTTP_404_NOT_FOUND)
             # Save the campaign in the database
             campaign = Campaign.objects.create(
                 name=campaign_name,
@@ -463,7 +467,6 @@ class CampaignView(APIView):
                 delay_seconds=delay_seconds,
                 contact_list=contact_file,
             )
-            smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
             campaign.smtp_servers.set(smtp_servers)  # Link the SMTP servers to the campaign
 
             contacts = contact_file.contacts.all()
@@ -553,7 +556,7 @@ class SendEmailsView(APIView):
 
         # Fetch contact list for the campaign
         try:
-            contact_file = ContactFile.objects.get(id=campaign.contact_list_id)
+            contact_file = ContactFile.objects.get(id=campaign.contact_list, user=user)
             contacts = Contact.objects.filter(contact_file=contact_file)
             contact_list = [contact.data for contact in contacts]
         except ContactFile.DoesNotExist:
@@ -564,9 +567,9 @@ class SendEmailsView(APIView):
         if not contact_list:
             return Response({'error': 'No contacts found for this campaign.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Fetch SMTP servers
+        # Fetch SMTP servers    
         smtp_server_ids = campaign.smtp_servers.values_list('id', flat=True)
-        smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids)
+        smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids,user=user)
         if not smtp_servers.exists():
             return Response({'error': 'No valid SMTP servers found for this campaign.'}, status=status.HTTP_400_BAD_REQUEST)
 

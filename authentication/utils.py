@@ -5,12 +5,12 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.contrib.auth.models import User
-import random
 from django.conf import settings
 from django.core.mail import EmailMessage
+import secrets
 
 def generate_otp():
-    return str(random.randint(100000, 999999))
+    return str(secrets.randbelow(900000) + 100000)  
 
 
 def send_otp_email(email, otp, username):
@@ -83,3 +83,61 @@ def send_welcome_email(user):
     )
     email_message.attach_alternative(html_content, "text/html")
     email_message.send()
+
+
+import logging
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.conf import settings
+
+logger = logging.getLogger(__name__)  # ✅ Logging setup
+
+def send_logout_otp_email(email,username, otp):
+    """
+    Send an OTP email to the specified address with HTML content.
+    """
+    subject = 'Your Wish Geeks Logout device verification OTP'
+    from_email = settings.DEFAULT_FROM_EMAIL
+
+    try:
+        html_content = render_to_string('emails/logout_otp.html', {'otp': otp, 'username': username})
+
+        email_message = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email=from_email,
+            to=[email],
+        )
+        email_message.content_subtype = "html"  
+
+        email_message.send(fail_silently=False)
+        logger.info(f"Logout OTP email sent successfully to {email}")
+
+    except Exception as e:
+        logger.error(f"Failed to send logout OTP email to {email}: {str(e)}")
+
+
+
+def send_login_otp_email(email,username, otp):
+    """
+    Send an OTP email to the specified address with HTML content.
+    """
+    subject = 'Your Wish Geeks Techserve 2FA verification OTP'
+    from_email = settings.DEFAULT_FROM_EMAIL
+
+    try:
+        html_content = render_to_string('emails/login_otp.html', {'otp': otp, 'username': username})
+
+        email_message = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email=from_email,
+            to=[email],
+        )
+        email_message.content_subtype = "html"  
+
+        email_message.send(fail_silently=False)
+        logger.info(f"Logout OTP email sent successfully to {email}")
+
+    except Exception as e:
+        logger.error(f"Failed to send logout OTP email to {email}: {str(e)}")
