@@ -38,6 +38,7 @@ class UserProfile(models.Model):
     state = models.CharField(max_length=100, null=True, blank=True)
     zip_code = models.CharField(max_length=20, null=True, blank=True)
     country = models.CharField(max_length=100, null=True, blank=True)
+    moblie = models.IntegerField(max_length=10,null=True)
     is_2fa_enabled = models.BooleanField(default=False)  
 
     DEFAULT_TRIAL_LIMIT = 20  

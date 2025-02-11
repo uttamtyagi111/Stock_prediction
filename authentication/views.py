@@ -547,7 +547,7 @@ def registerPage(request):
         send_otp_email(email, otp,username) 
 
         user_data = {
-            'username': form.cleaned_data.get('username'),
+            'username': username,
             'email': email,
             'password': form.cleaned_data.get('password'),
         }
@@ -669,7 +669,6 @@ def enable_2fa(request):
 
     try:
         user_profile = UserProfile.objects.get(user=user)
-
         if user_profile.is_2fa_enabled:
             return Response({'message': '2FA is already enabled.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -677,10 +676,8 @@ def enable_2fa(request):
         user_profile.save()
 
         return Response({'message': '2FA has been enabled successfully.'}, status=status.HTTP_200_OK)
-
     except UserProfile.DoesNotExist:
         return Response({'error': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
-
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -692,18 +689,15 @@ def disable_2fa(request):
 
     try:
         user_profile = UserProfile.objects.get(user=user)
-
         if not user_profile.is_2fa_enabled:
             return Response({'message': '2FA is already disabled.'}, status=status.HTTP_400_BAD_REQUEST)
-
+ 
         user_profile.is_2fa_enabled = False
         user_profile.save()
 
         return Response({'message': '2FA has been disabled successfully.'}, status=status.HTTP_200_OK)
-
     except UserProfile.DoesNotExist:
         return Response({'error': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
-
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -727,6 +721,5 @@ def get_2fa_status(request):
 
     except UserProfile.DoesNotExist:
         return Response({'error': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
-
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
