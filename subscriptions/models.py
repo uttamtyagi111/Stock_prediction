@@ -18,6 +18,7 @@ def get_trial_expiration_date():
     """Return the expiration date for a 14-day trial."""
     return timezone.now() + timedelta(days=14)
 
+from django.core.validators import RegexValidator
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     plan_name = models.CharField(max_length=20, choices=[('Basic', 'Basic'), ('Standard', 'Standard'),('Premium', 'Premium'),('Elite', 'Elite')], null=True, blank=True)
@@ -38,7 +39,12 @@ class UserProfile(models.Model):
     state = models.CharField(max_length=100, null=True, blank=True)
     zip_code = models.CharField(max_length=20, null=True, blank=True)
     country = models.CharField(max_length=100, null=True, blank=True)
-    moblie = models.IntegerField(max_length=10,null=True)
+    mobile = models.CharField(
+        max_length=15,  # Allows for international numbers
+        validators=[RegexValidator(r'^\+?\d{10,15}$', message="Enter a valid mobile number.")],
+        null=True,
+        blank=True
+    )
     is_2fa_enabled = models.BooleanField(default=False)  
 
     DEFAULT_TRIAL_LIMIT = 20  
