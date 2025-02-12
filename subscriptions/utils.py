@@ -29,7 +29,7 @@ def send_email_with_pdf(transaction_id, plan_name, price, expiry_date, user_emai
     print(f"Transaction ID: {transaction_id}, Plan Name: {plan_name}, Price: {price}, Expiry Date: {expiry_date}")
     
     # Render HTML content from a template
-    html_string = render_to_string("invoice_template.html", {
+    html_string = render_to_string("subscriptions/invoice_template.html", {
         "name": user_profile.user.get_full_name(),
         "plan": user_profile.current_plan.name,
         "amount": user_profile.current_plan.price, 
@@ -40,6 +40,20 @@ def send_email_with_pdf(transaction_id, plan_name, price, expiry_date, user_emai
         "zip_code": user_profile.zip_code,
         "country": user_profile.country
     })
+    # html_string = render_to_string("invoice_template.html", {
+    # "transaction_id": transaction_id,
+    # "plan": plan_name,
+    # "amount": price,
+    # "expiry_date": expiry_date,
+    # "name": user_profile.user.get_full_name(),
+    # "address_line1": user_profile.address_line1,
+    # "address_line2": user_profile.address_line2,
+    # "city": user_profile.city,
+    # "state": user_profile.state,
+    # "zip_code": user_profile.zip_code,
+    # "country": user_profile.country
+    # })
+
     print(html_string)
     pdf_content  = generate_pdf_from_html(html_string)
 

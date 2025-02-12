@@ -355,7 +355,9 @@ def initiate_payment(request):
 
         # Ensure user has a profile
         user_profile = UserProfile.objects.get(user=request.user)
-
+ # Check if the user already has the same plan
+        if user_profile.current_plan and user_profile.current_plan.name == plan_name:
+            return JsonResponse({"error": f"You have already purchased the {plan_name} plan."}, status=400)
         # Update billing address
         user_profile.address_line1 = address_line1
         user_profile.address_line2 = address_line2
@@ -457,7 +459,6 @@ def verify_payment(request):
                 # Retrieve the plan details from the database
                 plan = Plan.objects.get(id=user_profile.pending_plan_id)  # Assuming `pending_plan_id` was saved earlier
 
-                # Activate the plan using the activate_plan method
                 user_profile.activate_plan(plan)
                 
                 send_email_with_pdf(

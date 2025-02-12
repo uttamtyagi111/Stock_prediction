@@ -556,7 +556,7 @@ class SendEmailsView(APIView):
 
         # Fetch contact list for the campaign
         try:
-            contact_file = ContactFile.objects.get(id=campaign.contact_list, user=user)
+            contact_file = ContactFile.objects.filter(id=campaign.contact_list.id, user=user).first()
             contacts = Contact.objects.filter(contact_file=contact_file)
             contact_list = [contact.data for contact in contacts]
         except ContactFile.DoesNotExist:
