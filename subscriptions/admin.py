@@ -11,7 +11,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'plan_name', 'plan_status', 'emails_sent', 'plan_expiration_date','is_2fa_enabled')
     search_fields = ('user__username', 'user__email')
     list_filter = ('is_2fa_enabled','plan_name', 'plan_status')
-    readonly_fields = ('emails_sent', 'razorpay_order_id')
+    readonly_fields = ('emails_sent', 'phonepe_transaction_id')
     
     def plan_name(self, obj):
         return obj.current_plan.name if obj.current_plan else 'No Plan Assigned'

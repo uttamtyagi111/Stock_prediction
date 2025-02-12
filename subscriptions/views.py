@@ -106,11 +106,15 @@ def upgrade_plan(request):
         if new_plan_index <= current_plan_index:
             return Response({'message': 'You can only upgrade to a higher plan.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Carry forward remaining email count from the previous plan
+        remaining_emails = user_profile.email_limit - user_profile.emails_sent
+
         # Update the user profile with the new plan
         user_profile.plan_name = new_plan.name
         user_profile.current_plan = new_plan
         user_profile.plan_status = "active"
-        user_profile.emails_sent = 0  # Reset email count or adjust as needed
+        user_profile.emails_sent = 0  # Reset email count
+        user_profile.email_limit = new_plan.email_limit + remaining_emails  # New email limit (old emails + new plan's limit)
         user_profile.plan_start_date = timezone.now()
         user_profile.plan_expiration_date = timezone.now() + timedelta(days=new_plan.duration_days)
         user_profile.save()

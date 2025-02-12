@@ -24,8 +24,9 @@ class UserProfile(models.Model):
     plan_name = models.CharField(max_length=20, choices=[('Basic', 'Basic'), ('Standard', 'Standard'),('Premium', 'Premium'),('Elite', 'Elite')], null=True, blank=True)
     plan_status = models.CharField(max_length=20, default='inactive')
     emails_sent = models.IntegerField(default=0)
-    razorpay_order_id = models.CharField(max_length=255, blank=True, null=True,unique=True)
-    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True,unique=True)
+    email_limit = models.IntegerField(default=0)
+    # razorpay_order_id = models.CharField(max_length=255, blank=True, null=True,unique=True)
+    # razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True,unique=True)
     phonepe_transaction_id = models.CharField(max_length=255, null=True, blank=True)
     payment_status = models.CharField(max_length=20, default="pending")  # Add payment status
     plan_start_date = models.DateTimeField(null=True, blank=True)
