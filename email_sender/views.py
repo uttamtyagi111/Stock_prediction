@@ -1,11 +1,7 @@
-from rest_framework.response import Response
-from rest_framework import status
-from .models import Contact, Unsubscribed, ContactFile
+from rest_framework.views import APIView
 from rest_framework import serializers
-from .serializers import CampaignSerializer,ContactSerializer
 from datetime import timedelta
-from django.utils import timezone
-from .models import EmailStatusLog  
+from django.utils import timezone 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from email_validator import validate_email,EmailNotValidError
@@ -13,19 +9,17 @@ import dns.resolver
 from django.core.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.base import ContentFile
-from .models import EmailStatusLog 
 from subscriptions.models import UserProfile, Plan
 from .serializers import EmailStatusLogSerializer
 from rest_framework.permissions import IsAuthenticated,AllowAny
-from rest_framework.views import APIView
 from rest_framework import status,viewsets
 from django.core.mail import EmailMessage, get_connection
 from io import StringIO
 from django.template import Template, Context
 import csv,time,logging,os,boto3,time,uuid
 from django.conf import settings
-from .serializers import CampaignSerializer,SMTPServerSerializer,UploadedFileSerializer
-from .models import   SMTPServer, UploadedFile,Campaign,ContactFile
+from .serializers import CampaignSerializer,SMTPServerSerializer,UploadedFileSerializer, ContactSerializer
+from .models import   SMTPServer, UploadedFile,Campaign,ContactFile, Contact, Unsubscribed,EmailStatusLog 
 from django.shortcuts import  get_object_or_404
 from .forms import  SMTPServerForm
 from rest_framework.decorators import api_view, permission_classes
@@ -314,6 +308,35 @@ class ContactListView(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import ContactFile, Contact
+
+class UserContactListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user  # Get the logged-in user
+
+        # Fetch all contact files of the user
+        contact_files = ContactFile.objects.filter(user=user)
+
+        if not contact_files.exists():
+            return Response({'error': 'No contact files found for this user.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch contacts for each file
+        contact_list = []
+        for contact_file in contact_files:
+            contacts = Contact.objects.filter(contact_file=contact_file).values('data')
+            contact_list.append({
+                'file_id': contact_file.id,
+                'file_name': contact_file.name,
+                'contacts': list(contacts)  # Convert queryset to list
+            })
+
+        return Response({'user_contact_files': contact_list}, status=status.HTTP_200_OK)
 
 
 class ContactFileUpdateView(APIView):
@@ -368,12 +391,6 @@ class ContactFileUpdateView(APIView):
             'created_at': contact_file.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
         }, status=status.HTTP_200_OK)
 
-
-
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
-from email_sender.models import Contact, ContactFile, Unsubscribed
 class ContactUnsubscribeView(APIView):
     permission_classes = [AllowAny]
 
@@ -409,14 +426,6 @@ class ContactUnsubscribeView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-   
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from .models import Campaign, ContactFile, SMTPServer
-from .serializers import CampaignSerializer, ContactSerializer
 
 class CampaignView(APIView):
     permission_classes = [IsAuthenticated]
@@ -461,7 +470,7 @@ class CampaignView(APIView):
             campaign = Campaign.objects.create(
                 name=campaign_name,
                 user=request.user,
-                subject=subject,
+                subject=subject, 
                 uploaded_file_key=uploaded_file_key,
                 display_name=display_name,
                 delay_seconds=delay_seconds,
@@ -549,12 +558,10 @@ class SendEmailsView(APIView):
         user_id = user.id
 
         try:
-            # Fetch campaign and ensure it belongs to the user
             campaign = Campaign.objects.get(id=campaign_id, user_id=user_id)
         except Campaign.DoesNotExist:
             return Response({'error': 'Campaign not found or unauthorized.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Fetch contact list for the campaign
         try:
             contact_file = ContactFile.objects.filter(id=campaign.contact_list.id, user=user).first()
             contacts = Contact.objects.filter(contact_file=contact_file)
@@ -573,7 +580,6 @@ class SendEmailsView(APIView):
         if not smtp_servers.exists():
             return Response({'error': 'No valid SMTP servers found for this campaign.'}, status=status.HTTP_400_BAD_REQUEST)
 
-
         # Check user email limits and plan status
         can_send, message = profile.can_send_email()
         if not can_send:
@@ -582,7 +588,7 @@ class SendEmailsView(APIView):
         if profile.plan_status == 'expired':
             return Response({'error': 'Your plan has expired. Please subscribe a plan to continue.'}, status=status.HTTP_403_FORBIDDEN)
 
-        email_limit = profile.current_plan.email_limit if profile.current_plan else self.DEFAULT_EMAIL_LIMIT
+        email_limit = profile.email_limit if profile.email_limit else self.DEFAULT_EMAIL_LIMIT
 
         if email_limit != 0 and profile.emails_sent >= email_limit:
             if profile.current_plan is None:
@@ -633,7 +639,7 @@ class SendEmailsView(APIView):
                     })
                     async_to_sync(channel_layer.group_send)(
                     f'email_status_{user_id}',
-                    {
+                    {                                                                                                                                                                                                                       
                         'type': 'send_status_update',
                         'email': remaining_recipient.get('Email'),
                         'status': status_message,

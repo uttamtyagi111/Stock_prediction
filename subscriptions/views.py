@@ -107,26 +107,26 @@ def upgrade_plan(request):
             return Response({'message': 'You can only upgrade to a higher plan.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Carry forward remaining email count from the previous plan
-        remaining_emails = user_profile.email_limit - user_profile.emails_sent
+        # remaining_emails = user_profile.email_limit - user_profile.emails_sent
 
         # Update the user profile with the new plan
         user_profile.plan_name = new_plan.name
         user_profile.current_plan = new_plan
-        user_profile.plan_status = "active"
-        user_profile.emails_sent = 0  # Reset email count
-        user_profile.email_limit = new_plan.email_limit + remaining_emails  # New email limit (old emails + new plan's limit)
+        user_profile.plan_status = "initiated"
+        # user_profile.emails_sent = 0  # Reset email count
+        user_profile.email_limit += new_plan.email_limit  # New email limit (old emails + new plan's limit)
         user_profile.plan_start_date = timezone.now()
         user_profile.plan_expiration_date = timezone.now() + timedelta(days=new_plan.duration_days)
         user_profile.save()
 
-        # Optional: Send an email notification to the user
-        send_email_with_pdf(
-            transaction_id=f'upgrade_{timezone.now().strftime("%Y%m%d%H%M%S")}',
-            plan_name=new_plan.name,
-            price=new_plan.price,
-            expiry_date=user_profile.plan_expiration_date,
-            user_email=user_profile.user.email
-        )
+        # # Optional: Send an email notification to the user
+        # send_email_with_pdf(
+        #     transaction_id=f'upgrade_{timezone.now().strftime("%Y%m%d%H%M%S")}',
+        #     plan_name=new_plan.name,
+        #     price=new_plan.price,
+        #     expiry_date=user_profile.plan_expiration_date,
+        #     user_email=user_profile.user.email
+        # )
 
         return Response({'message': f'Plan successfully upgraded to {plan_name}.'}, status=status.HTTP_200_OK)
 
@@ -359,7 +359,7 @@ def initiate_payment(request):
 
         # Ensure user has a profile
         user_profile = UserProfile.objects.get(user=request.user)
- # Check if the user already has the same plan
+        # Check if the user already has the same plan
         if user_profile.current_plan and user_profile.current_plan.name == plan_name:
             return JsonResponse({"error": f"You have already purchased the {plan_name} plan."}, status=400)
         # Update billing address

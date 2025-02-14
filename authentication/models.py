@@ -44,3 +44,7 @@ class LoginOTP(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.otp}- {self.user.username}"
+    
+    # class Meta:
+    #     unique_together = ['user', 'otp']  # Prevent duplicate OTPs for the same email
+

@@ -278,7 +278,8 @@ def verifyLoginOTP(request):
         return Response({'message': 'User not found.'}, status=400)
 
     try:
-        otp_instance = LoginOTP.objects.get(user=user)
+        otp_instance = LoginOTP.objects.filter(user=user).latest('created_at')
+
     except LoginOTP.DoesNotExist:
         return Response({'message': 'Invalid OTP or OTP has expired.'}, status=400)
 
@@ -287,7 +288,11 @@ def verifyLoginOTP(request):
 
     if otp != otp_instance.otp:
         return Response({'message': 'Invalid OTP.'}, status=400)
+    
+    # LoginOTP.objects.filter(user=user).delete()  # Delete old OTPs
+    # otp_instance = LoginOTP.objects.create(user=user, otp=otp)
 
+    
     refresh = RefreshToken.for_user(user)
     access_token = str(refresh.access_token)
     refresh_token = str(refresh)

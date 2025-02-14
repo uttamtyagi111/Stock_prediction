@@ -71,10 +71,10 @@ class UserProfile(models.Model):
             self.save()
             return False, "Your subscription has expired. Please renew your plan."
 
-        if self.current_plan.email_limit == 0:
+        if self.email_limit == 0:
             return True, "You have unlimited email sending capabilities."
 
-        if self.emails_sent < self.current_plan.email_limit:
+        if self.emails_sent < self.email_limit:
             return True, "You can send emails."
 
         self.plan_status = "expired"
@@ -91,12 +91,14 @@ class UserProfile(models.Model):
         self.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
         self.payment_status = 'paid'  
         self.emails_sent = 0
+        self.email_limit = plan.email_limit 
         self.pending_plan_id = None 
         self.save() 
 
     def choose_plan_view(self, new_plan):
         """Subscribe the user to a selected plan."""
-        self.activate_plan(new_plan) 
+        self.activate_plan(new_plan)
+        self.email_limit = new_plan.email_limit 
         self.save() 
         
     def increment_email_count(self):
