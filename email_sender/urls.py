@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import  SendEmailsView,UploadedFileList,UpdateUploadedFile,EmailStatusAnalyticsView,UserContactListView
+from .views import  SendEmailsView,UploadedFileList,UpdateUploadedFile,EmailStatusAnalyticsView,UserContactListView,DeleteContactListView
 from . import views
 from .views import UploadHTMLToS3,EmailStatusByDateRangeView,ContactUploadView,CampaignView,ContactListView,ContactFileUpdateView,ContactUnsubscribeView
 
@@ -23,6 +23,7 @@ urlpatterns = [
     path('user-contacts/', UserContactListView.as_view(), name='user-contacts'),
     path('contact-list/', ContactListView.as_view(), name='contact-list'),
     path('contact-update/<int:file_id>/', ContactFileUpdateView.as_view(), name='contact-update'),
+    path('delete-contact-list/', DeleteContactListView.as_view(), name='delete-contact-list'),
     path('contact-files/<int:contact_file_id>/unsubscribe/<int:contact_id>/', ContactUnsubscribeView.as_view(), name='unsubscribe-contact'),
     path('campaign/', CampaignView.as_view(), name='create_campaign'),
     path('campaigns/<int:id>/', CampaignView.as_view(), name='campaign-detail'),

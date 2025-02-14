@@ -333,7 +333,8 @@ class UserContactListView(APIView):
             contact_list.append({
                 'file_id': contact_file.id,
                 'file_name': contact_file.name,
-                'contacts': list(contacts)  # Convert queryset to list
+                'contacts': list(contacts),
+                'created_at': contact_file.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')# Convert queryset to list
             })
 
         return Response({'user_contact_files': contact_list}, status=status.HTTP_200_OK)
@@ -390,6 +391,35 @@ class ContactFileUpdateView(APIView):
             'total_new_rows': new_rows_count,  # Number of new rows added
             'created_at': contact_file.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')
         }, status=status.HTTP_200_OK)
+        
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import ContactFile, Contact
+
+class DeleteContactListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        file_id = request.query_params.get('file_id')
+
+        if not file_id:
+            return Response({'error': 'file_id is required to delete a contact list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            contact_file = ContactFile.objects.get(id=file_id, user=user)
+        except ContactFile.DoesNotExist:
+            return Response({'error': 'Contact file not found or you do not have permission to delete it.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Delete all contacts associated with this file
+        Contact.objects.filter(contact_file=contact_file).delete()
+        
+        contact_file.delete()
+
+        return Response({'message': 'Contact list deleted successfully.'}, status=status.HTTP_200_OK)
+
 
 class ContactUnsubscribeView(APIView):
     permission_classes = [AllowAny]

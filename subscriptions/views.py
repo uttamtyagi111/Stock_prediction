@@ -108,7 +108,7 @@ def upgrade_plan(request):
 
         # Carry forward remaining email count from the previous plan
         # remaining_emails = user_profile.email_limit - user_profile.emails_sent
-
+        current_expiration_date = user_profile.plan_expiration_date
         # Update the user profile with the new plan
         user_profile.plan_name = new_plan.name
         user_profile.current_plan = new_plan
@@ -116,7 +116,7 @@ def upgrade_plan(request):
         # user_profile.emails_sent = 0  # Reset email count
         user_profile.email_limit += new_plan.email_limit  # New email limit (old emails + new plan's limit)
         user_profile.plan_start_date = timezone.now()
-        user_profile.plan_expiration_date = timezone.now() + timedelta(days=new_plan.duration_days)
+        user_profile.plan_expiration_date = current_expiration_date 
         user_profile.save()
 
         # # Optional: Send an email notification to the user
@@ -136,16 +136,7 @@ def upgrade_plan(request):
         return Response({'message': 'Selected plan not found.'}, status=status.HTTP_404_NOT_FOUND)
           
 
-logger = logging.getLogger(__name__)    
-import razorpay
-import logging
-from django.conf import settings
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from razorpay.errors import BadRequestError, ServerError
-from .models import Plan, UserProfile
+
 
 # Logger instance
 logger = logging.getLogger(__name__)
