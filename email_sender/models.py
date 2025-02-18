@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 
 class UploadedFile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)  
-    name = models.CharField(max_length=255)  
+    name = models.CharField(max_length=50)
+    key = models.CharField(max_length=255,blank=True, null=True, help_text="Key for Template")  
     file_url = models.URLField(max_length=1024)  
     uploaded_at = models.DateTimeField(auto_now_add=True) 
 

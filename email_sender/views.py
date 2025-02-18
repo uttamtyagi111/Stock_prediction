@@ -101,6 +101,11 @@ class UploadHTMLToS3(APIView):
         logger.debug(f"DATA: {request.data}")
 
         html_content = None
+        user_given_name = request.data.get('name')  
+
+        if not user_given_name:
+            return Response({'error': 'Name is required for the template.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
         if 'file' in request.FILES:
             file = request.FILES['file']
@@ -141,8 +146,9 @@ class UploadHTMLToS3(APIView):
         file_url = f"{settings.AWS_S3_FILE_URL}{file_name}"
 
         uploaded_file = UploadedFile.objects.create(
-            name=file_name,
+            name=user_given_name,
             file_url=file_url,
+            key = file_name,
             user=request.user  
         )
 
@@ -150,7 +156,7 @@ class UploadHTMLToS3(APIView):
             'user_id': request.user.id,
             'name': uploaded_file.name,
             'file_url': uploaded_file.file_url,
-            'file_key': file_name  
+            'file_key': file_name 
         }, status=status.HTTP_201_CREATED)
 
 
@@ -455,6 +461,18 @@ class ContactUnsubscribeView(APIView):
             return Response({"error": "Contact file not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from .models import Campaign
+from .serializers import CampaignSerializer
+
+class CampaignListView(APIView):
+    def get(self, request, *args, **kwargs):
+        campaigns = Campaign.objects.all()  # Get all campaigns (not just for the logged-in user)
+        serializer = CampaignSerializer(campaigns, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CampaignView(APIView):

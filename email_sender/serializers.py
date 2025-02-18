@@ -4,7 +4,7 @@ from .models import  SMTPServer,UploadedFile,EmailStatusLog,ContactFile,Campaign
 class UploadedFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedFile
-        fields = ['id', 'user_id', 'name', 'file_url']  
+        fields = ['id', 'user_id', 'name','key', 'file_url']  
 
 
 class EmailStatusLogSerializer(serializers.ModelSerializer):
