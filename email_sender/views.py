@@ -476,6 +476,7 @@ class CampaignView(APIView):
 
 
     def post(self, request, *args, **kwargs):
+        logger.debug(f"Request Data: {request.data}")
         serializer = CampaignSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             campaign_name = serializer.validated_data['campaign_name']
