@@ -36,7 +36,7 @@ from .models import Campaign, ContactFile, SMTPServer
 from rest_framework import serializers
 
 class CampaignSerializer(serializers.Serializer):
-    campaign_name = serializers.CharField(max_length=255) 
+    name = serializers.CharField(max_length=255) 
     smtp_server_ids = serializers.ListField(
         child=serializers.IntegerField(),  
         write_only=True
@@ -45,7 +45,7 @@ class CampaignSerializer(serializers.Serializer):
     subject = serializers.CharField(max_length=255) 
     delay_seconds = serializers.IntegerField(required=False, default=0) 
     uploaded_file_key = serializers.CharField() 
-    contact_list = serializers.IntegerField()
+    contact_list = serializers.PrimaryKeyRelatedField(queryset=ContactFile.objects.all()) 
     
     def validate_contact_list(self, value):
         if not ContactFile.objects.filter(id=value).exists():

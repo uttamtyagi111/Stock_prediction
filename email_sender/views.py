@@ -469,8 +469,10 @@ from .models import Campaign
 from .serializers import CampaignSerializer
 
 class CampaignListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request, *args, **kwargs):
-        campaigns = Campaign.objects.all()  # Get all campaigns (not just for the logged-in user)
+        campaigns = Campaign.objects.filter(user=request.user)  # Get all campaigns (not just for the logged-in user)
         serializer = CampaignSerializer(campaigns, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -497,7 +499,7 @@ class CampaignView(APIView):
         logger.debug(f"Request Data: {request.data}")
         serializer = CampaignSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            campaign_name = serializer.validated_data['campaign_name']
+            name = serializer.validated_data['campaign_name']
             contact_file_id = serializer.validated_data['contact_list']  
             smtp_server_ids = serializer.validated_data['smtp_server_ids']
             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
@@ -518,7 +520,7 @@ class CampaignView(APIView):
                                 status=status.HTTP_404_NOT_FOUND)
             # Save the campaign in the database
             campaign = Campaign.objects.create(
-                name=campaign_name,
+                name=name,
                 user=request.user,
                 subject=subject, 
                 uploaded_file_key=uploaded_file_key,
@@ -535,7 +537,7 @@ class CampaignView(APIView):
             return Response({
                 'status': 'Campaign saved successfully.',
                 'campaign_id': campaign.id,
-                'campaign_name': campaign_name,
+                'campaign_name': name,
                 'contacts': contact_serializer.data,
             }, status=status.HTTP_201_CREATED)
             
