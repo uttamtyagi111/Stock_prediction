@@ -10,7 +10,8 @@ class Plan(models.Model):
     device_limit = models.IntegerField(default=1)
     duration_days = models.IntegerField(default=14)  
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-
+    level = models.IntegerField(unique=True) 
+    
     def __str__(self):
         return self.name
 

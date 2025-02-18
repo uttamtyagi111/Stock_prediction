@@ -510,6 +510,7 @@ class CampaignView(APIView):
 
             contacts = contact_file.contacts.all()
             contact_serializer = ContactSerializer(contacts, many=True)
+            print(contact_serializer.data)
 
             return Response({
                 'status': 'Campaign saved successfully.',
@@ -829,12 +830,6 @@ class SendEmailsView(APIView):
             'failed_sends': failed_sends,
             'email_statuses': email_statuses
         }, status=status.HTTP_200_OK)
-
-
-
-
-
-
 
     
 class EmailStatusAnalyticsView(APIView):

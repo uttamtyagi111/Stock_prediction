@@ -20,7 +20,7 @@ def send_otp_email(email, otp, username):
     subject = 'Your Wish Geeks Techserve Registration OTP'
     from_email = settings.DEFAULT_FROM_EMAIL
 
-    html_content = render_to_string('emails/otp_email.html', {'otp': otp, 'username': username})
+    html_content = render_to_string('emails/otp_email.html', {'username': username,'otp': otp})
 
     email_message = EmailMessage(
         subject=subject,
@@ -100,7 +100,7 @@ def send_logout_otp_email(email,username, otp):
     from_email = settings.DEFAULT_FROM_EMAIL
 
     try:
-        html_content = render_to_string('emails/logout_otp.html', {'otp': otp, 'username': username})
+        html_content = render_to_string('emails/logout_otp.html', {'username': username,'otp': otp})
 
         email_message = EmailMessage(
             subject=subject,
@@ -126,7 +126,7 @@ def send_login_otp_email(email,username, otp):
     from_email = settings.DEFAULT_FROM_EMAIL
 
     try:
-        html_content = render_to_string('emails/login_otp.html', {'otp': otp, 'username': username})
+        html_content = render_to_string('emails/login_otp.html', { 'username': username,'otp': otp})
 
         email_message = EmailMessage(
             subject=subject,
@@ -137,7 +137,7 @@ def send_login_otp_email(email,username, otp):
         email_message.content_subtype = "html"  
 
         email_message.send(fail_silently=False)
-        logger.info(f"Logout OTP email sent successfully to {email}")
+        logger.info(f"Login OTP email sent successfully to {email}")
 
     except Exception as e:
-        logger.error(f"Failed to send logout OTP email to {email}: {str(e)}")
+        logger.error(f"Failed to send login OTP email to {email}: {str(e)}")

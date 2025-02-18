@@ -133,7 +133,7 @@ def get_logged_in_devices(request):
 #         }, status=200)
 
 #     if user_profile.is_2fa_enabled:
-#         LoginOTP.objects.filter(user=user, expires_at__lt= now()).delete()
+#         Login.objects.filter(user=user, expires_at__lt= now()).delete()
 #         otp_instance = LoginOTP.objects.create(
 #             user=user,
 #             otp=generate_otp(),

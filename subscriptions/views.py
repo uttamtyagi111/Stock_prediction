@@ -89,35 +89,47 @@ def upgrade_plan(request):
     """
     plan_name = request.data.get('plan_name')
 
-    # List of available plans with an order to ensure upgrades are happening correctly
-    available_plans = ['Basic', 'Standard', 'Premium', 'Elite']
+    # Fetch all available plans from the database in sorted order
+    available_plans = list(Plan.objects.order_by('level').values_list('name', flat=True))
 
     if plan_name not in available_plans:
-        return Response({'message': 'Invalid plan selected. Choose from "Basic", "Standard", "Premium", or "Elite".'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Invalid plan selected. Choose a valid plan.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user_profile = UserProfile.objects.get(user=request.user)
         new_plan = Plan.objects.get(name__iexact=plan_name)
 
-        # Check if the new plan is actually an upgrade
-        current_plan_index = available_plans.index(user_profile.plan_name)
+        # Fetch the indexes dynamically from the Plan model
+        current_plan_index = available_plans.index(user_profile.current_plan.name) if user_profile.current_plan else -1
         new_plan_index = available_plans.index(new_plan.name)
 
         if new_plan_index <= current_plan_index:
             return Response({'message': 'You can only upgrade to a higher plan.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Carry forward remaining email count from the previous plan
-        # remaining_emails = user_profile.email_limit - user_profile.emails_sent
-        current_expiration_date = user_profile.plan_expiration_date
+        # Expiration date should remain the same
+        existing_expiration_date = user_profile.plan_expiration_date
+
         # Update the user profile with the new plan
         user_profile.plan_name = new_plan.name
         user_profile.current_plan = new_plan
         user_profile.plan_status = "initiated"
-        # user_profile.emails_sent = 0  # Reset email count
-        user_profile.email_limit += new_plan.email_limit  # New email limit (old emails + new plan's limit)
+        user_profile.email_limit += new_plan.email_limit  # Keep old email limit + new plan's limit
         user_profile.plan_start_date = timezone.now()
-        user_profile.plan_expiration_date = current_expiration_date 
+        
+        # Keep the old expiration date
+        user_profile.plan_expiration_date = existing_expiration_date  
+        
         user_profile.save()
+
+        return Response({'message': f'Plan successfully upgraded to {plan_name}.'}, status=status.HTTP_200_OK)
+
+    except UserProfile.DoesNotExist:
+        return Response({'message': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except Plan.DoesNotExist:
+        return Response({'message': 'Selected plan not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+          
+
 
         # # Optional: Send an email notification to the user
         # send_email_with_pdf(
@@ -127,15 +139,6 @@ def upgrade_plan(request):
         #     expiry_date=user_profile.plan_expiration_date,
         #     user_email=user_profile.user.email
         # )
-
-        return Response({'message': f'Plan successfully upgraded to {plan_name}.'}, status=status.HTTP_200_OK)
-
-    except UserProfile.DoesNotExist:
-        return Response({'message': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
-    except Plan.DoesNotExist:
-        return Response({'message': 'Selected plan not found.'}, status=status.HTTP_404_NOT_FOUND)
-          
-
 
 
 # Logger instance
