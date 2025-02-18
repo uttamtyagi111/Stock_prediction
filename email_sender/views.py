@@ -486,6 +486,7 @@ class CampaignView(APIView):
             uploaded_file_key = serializer.validated_data['uploaded_file_key']
             display_name = serializer.validated_data['display_name']
 
+            logger.debug(f"Received Data: {serializer.validated_data}") 
             # Validate the contact file
             try:
                 contact_file = ContactFile.objects.get(id=contact_file_id,user=request.user)
@@ -510,7 +511,7 @@ class CampaignView(APIView):
 
             contacts = contact_file.contacts.all()
             contact_serializer = ContactSerializer(contacts, many=True)
-            print(contact_serializer.data)
+            logger.info(f"Campaign Created: {campaign.id}, Contacts Count: {len(contact_serializer.data)}")  
 
             return Response({
                 'status': 'Campaign saved successfully.',
@@ -518,9 +519,11 @@ class CampaignView(APIView):
                 'campaign_name': campaign_name,
                 'contacts': contact_serializer.data,
             }, status=status.HTTP_201_CREATED)
+            
+        logger.warning(f"Serializer Errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):    
         campaign_id = kwargs.get('id')
         if not campaign_id:
             return Response({'error': 'Campaign ID is required for updating.'}, status=status.HTTP_400_BAD_REQUEST)
