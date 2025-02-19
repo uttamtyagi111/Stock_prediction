@@ -469,7 +469,7 @@ class CampaignListView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             campaigns = Campaign.objects.filter(user=request.user).values(
-                'id', 'name', 'subject', 'contact_list', 'delay_seconds', 'uploaded_file_key', 'display_name'
+                'id', 'name', 'subject', 'contact_list', 'delay_seconds', 'uploaded_file_name', 'display_name'
             )
             logger.info(f"User {request.user.email} retrieved {len(campaigns)} campaigns.")
             return Response(list(campaigns), status=status.HTTP_200_OK)
@@ -485,18 +485,17 @@ class CampaignView(APIView):
 
     def get(self, request, *args, **kwargs):
         campaign_id = kwargs.get('id')
-        if campaign_id:
-            try:
-                campaign = Campaign.objects.get(id=campaign_id, user=request.user)
-                serializer = CampaignSerializer(campaign)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            except Campaign.DoesNotExist:
-                return Response({'error': 'Campaign not found.'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            campaigns = Campaign.objects.filter(user=request.user)
-            serializer = CampaignSerializer(campaigns, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        if not campaign_id:
+            return Response({'error': 'Campaign ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        campaign = Campaign.objects.filter(id=campaign_id, user=request.user).values(
+            'id', 'name', 'subject', 'uploaded_file_name', 'display_name', 'delay_seconds', 'contact_list_id'
+        ).first()
+
+        if not campaign:
+            return Response({'error': 'Campaign not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(campaign, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         logger.debug(f"Request Data: {request.data}")
@@ -511,7 +510,7 @@ class CampaignView(APIView):
             smtp_server_ids = serializer.validated_data['smtp_server_ids']
             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
             subject = serializer.validated_data.get('subject')
-            uploaded_file_key = serializer.validated_data['uploaded_file_key']
+            uploaded_file_name = serializer.validated_data['uploaded_file_name']
             display_name = serializer.validated_data['display_name']
 
             logger.debug(f"Received Data: {serializer.validated_data}") 
@@ -530,7 +529,7 @@ class CampaignView(APIView):
                 name=name,
                 user=request.user,
                 subject=subject, 
-                uploaded_file_key=uploaded_file_key,
+                uploaded_file_name=uploaded_file_name,
                 display_name=display_name,
                 delay_seconds=delay_seconds,
                 contact_list=contact_file,

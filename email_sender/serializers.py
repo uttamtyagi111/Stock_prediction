@@ -44,8 +44,12 @@ class CampaignSerializer(serializers.Serializer):
     display_name = serializers.CharField()  
     subject = serializers.CharField(max_length=255) 
     delay_seconds = serializers.IntegerField(required=False, default=0) 
-    uploaded_file_key = serializers.CharField() 
+    uploaded_file_name = serializers.CharField() 
     contact_list = serializers.IntegerField()
+    
+    class Meta:
+        model = Campaign
+        fields = '__all__'
     
     def validate_contact_list(self, value):
         if not ContactFile.objects.filter(id=value).exists():

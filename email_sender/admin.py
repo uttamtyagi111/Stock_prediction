@@ -73,7 +73,7 @@ class ContactAdmin(admin.ModelAdmin):
 
 @admin.register(Campaign)
 class CampaignAdmin(admin.ModelAdmin):
-    list_display = ('name', 'user', 'subject', 'uploaded_file_key', 'display_name', 'delay_seconds', 'created_at')
+    list_display = ('name', 'user', 'subject', 'uploaded_file_name', 'display_name', 'delay_seconds', 'created_at')
     list_filter = ('created_at', 'user')
     search_fields = ('name', 'subject', 'user__email')
     ordering = ('-created_at',)

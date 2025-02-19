@@ -62,7 +62,7 @@ class Campaign(models.Model):
     contact_list = models.ForeignKey(ContactFile, on_delete=models.CASCADE, related_name='campaigns', help_text="Contact list associated with the campaign")
     delay_seconds = models.PositiveIntegerField(help_text="Delay between emails in seconds")
     smtp_servers = models.ManyToManyField('SMTPServer', related_name='campaigns', help_text="SMTP servers used for the campaign")
-    uploaded_file_key = models.CharField(max_length=255, blank=True, null=True, help_text="Key for the uploaded file")
+    uploaded_file_name = models.CharField(max_length=255, blank=True, null=True, help_text="name for the uploaded file")
     display_name = models.CharField(max_length=255, blank=True, null=True, help_text="Display name for the sender")
     created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when the campaign was created")
     updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when the campaign was last updated")
