@@ -28,5 +28,5 @@ urlpatterns = [
     path('contact-files/<int:contact_file_id>/unsubscribe/<int:contact_id>/', ContactUnsubscribeView.as_view(), name='unsubscribe-contact'),
     path('campaign/', CampaignView.as_view(), name='create_campaign'),
     path('campaigns/<int:id>/', CampaignView.as_view(), name='campaign-detail'),
-    path('campaigns/', CampaignListView.as_view(), name='all-campaigns'),
+    path('campaigns-list/', CampaignListView.as_view(), name='all-campaigns'),
  ]

@@ -35,7 +35,7 @@ class ContactInline(admin.TabularInline):
 
 @admin.register(ContactFile)
 class ContactFileAdmin(admin.ModelAdmin):
-    list_display = ('name', 'user', 'uploaded_at')  # Fields to display in the list view
+    list_display = ('id','name', 'user', 'uploaded_at')  # Fields to display in the list view
     list_filter = ('user', 'uploaded_at')  # Filters for easier navigation
     search_fields = ('name', 'user__username')  # Search functionality
     inlines = [ContactInline]  # Display associated contacts inline

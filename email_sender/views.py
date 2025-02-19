@@ -461,20 +461,23 @@ class ContactUnsubscribeView(APIView):
             return Response({"error": "Contact file not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.views import APIView
-from .models import Campaign
-from .serializers import CampaignSerializer
-
+        
+        
 class CampaignListView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request, *args, **kwargs):
-        campaigns = Campaign.objects.filter(user=request.user)  # Get all campaigns (not just for the logged-in user)
-        serializer = CampaignSerializer(campaigns, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            campaigns = Campaign.objects.filter(user=request.user).values(
+                'id', 'name', 'subject', 'contact_list', 'delay_seconds', 'uploaded_file_key', 'display_name'
+            )
+            logger.info(f"User {request.user.email} retrieved {len(campaigns)} campaigns.")
+            return Response(list(campaigns), status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error retrieving campaigns for user {request.user.email}: {str(e)}")
+            return Response({'error': 'Failed to retrieve campaigns'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
 class CampaignView(APIView):
@@ -499,7 +502,11 @@ class CampaignView(APIView):
         logger.debug(f"Request Data: {request.data}")
         serializer = CampaignSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            name = serializer.validated_data['campaign_name']
+            user_campaign_count = Campaign.objects.filter(user=request.user).count()
+            if user_campaign_count >= 10:
+                return Response({'error': 'You can only save up to 10 campaigns.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            name = serializer.validated_data['name']
             contact_file_id = serializer.validated_data['contact_list']  
             smtp_server_ids = serializer.validated_data['smtp_server_ids']
             delay_seconds = serializer.validated_data.get('delay_seconds', 0)
@@ -528,6 +535,13 @@ class CampaignView(APIView):
                 delay_seconds=delay_seconds,
                 contact_list=contact_file,
             )
+                    # Debugging: Check if campaign ID is generated
+            if not campaign.id:
+                logger.error("Campaign ID is missing after creation.")
+                return Response({'error': 'Failed to create campaign. Try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            logger.debug(f"Campaign Created Successfully: ID = {campaign.id}")
+            
             campaign.smtp_servers.set(smtp_servers)  # Link the SMTP servers to the campaign
 
             contacts = contact_file.contacts.all()

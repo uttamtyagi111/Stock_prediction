@@ -45,7 +45,7 @@ class CampaignSerializer(serializers.Serializer):
     subject = serializers.CharField(max_length=255) 
     delay_seconds = serializers.IntegerField(required=False, default=0) 
     uploaded_file_key = serializers.CharField() 
-    contact_list = serializers.PrimaryKeyRelatedField(queryset=ContactFile.objects.all()) 
+    contact_list = serializers.IntegerField()
     
     def validate_contact_list(self, value):
         if not ContactFile.objects.filter(id=value).exists():
@@ -88,13 +88,19 @@ class CampaignSerializer(serializers.Serializer):
         
         return data
 
-    def validate_campaign_name(self, value):
+    def validate_name(self, value):
         """Ensure the campaign name is unique for the user."""
         request = self.context.get('request')
         if request and hasattr(request, "user"):
             if Campaign.objects.filter(name=value, user=request.user).exists():
                 raise serializers.ValidationError("A campaign with this name already exists for the user.")
         return value
+    
+    def to_representation(self, instance):
+        """Ensure `id` is included in the response."""
+        data = super().to_representation(instance)
+        data['id'] = instance.id  # Manually add the `id`
+        return data
 
     
 from rest_framework import serializers
