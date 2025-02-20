@@ -819,3 +819,54 @@ def get_2fa_status(request):
         )
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.mail import send_mail
+from .models import Enquiry
+from .serializers import EnquirySerializer
+from django.conf import settings
+
+class EnquiryView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        serializer = EnquirySerializer(data=request.data)
+        
+        if serializer.is_valid():
+            enquiry = serializer.save()
+            
+            # Send email to admin
+            admin_email_subject = f"New Enquiry from {enquiry.name}"
+            admin_email_body = f"""
+            Name: {enquiry.name}
+            Phone: {enquiry.phone}
+            Email: {enquiry.email}
+            Subject: {enquiry.subject}
+            Description: {enquiry.description}
+            """
+            send_mail(
+                admin_email_subject,
+                admin_email_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [settings.ADMIN_EMAIL],  # Replace with your email
+                fail_silently=False,
+            )
+
+            # Send confirmation email to user
+            user_email_subject = "Enquiry Received"
+            user_email_body = f"Dear {enquiry.name},\n\nThank you for reaching out! We have received your enquiry and will get back to you soon.\n\nBest Regards,\nYour Company"
+            
+            send_mail(
+                user_email_subject,
+                user_email_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [enquiry.email],
+                fail_silently=False,
+            )
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

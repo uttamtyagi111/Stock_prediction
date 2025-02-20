@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from .views import LogoutDeviceView
+from .views import LogoutDeviceView,EnquiryView
 from . import views
 from django.urls import path
 from rest_framework_simplejwt.views import (
@@ -26,4 +26,5 @@ urlpatterns = [
     path('get-2fa-status/', views.get_2fa_status, name='get-2fa-status'),
     path('enable-2fa/', views.enable_2fa, name='enable-2fa'),
     path('disable-2fa/', views.disable_2fa, name='disable-2fa'),
+    path('enquiry/', EnquiryView.as_view(), name='enquiry-form'),
 ]

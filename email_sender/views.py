@@ -592,33 +592,46 @@ class ContactUnsubscribeView(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Prefetch
+import logging
+from .models import Campaign, SMTPServer
+
+logger = logging.getLogger(__name__)
 
 class CampaignListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         try:
-            campaigns = Campaign.objects.filter(user=request.user).values(
-                "id",
-                "name",
-                "subject",
-                "contact_list",
-                "delay_seconds",
-                "uploaded_file_name",
-                "display_name",
-            )
-            logger.info(
-                f"User {request.user.email} retrieved {len(campaigns)} campaigns."
-            )
-            return Response(list(campaigns), status=status.HTTP_200_OK)
+            campaigns = Campaign.objects.filter(user=request.user).prefetch_related("smtp_servers")
+
+            campaign_data = []
+            for campaign in campaigns:
+                campaign_data.append({
+                    "id": campaign.id,
+                    "name": campaign.name,
+                    "subject": campaign.subject,
+                    "contact_list_id": campaign.contact_list_id,
+                    "delay_seconds": campaign.delay_seconds,
+                    "uploaded_file_name": campaign.uploaded_file_name,
+                    "display_name": campaign.display_name,
+                    "smtp_server_ids": list(campaign.smtp_servers.values_list("id", flat=True)),  # ✅ SMTP Server IDs List
+                })
+
+            logger.info(f"User {request.user.email} retrieved {len(campaign_data)} campaigns.")
+            return Response(campaign_data, status=status.HTTP_200_OK)
+
         except Exception as e:
-            logger.error(
-                f"Error retrieving campaigns for user {request.user.email}: {str(e)}"
-            )
+            logger.error(f"Error retrieving campaigns for user {request.user.email}: {str(e)}")
             return Response(
                 {"error": "Failed to retrieve campaigns"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 
 class CampaignView(APIView):
@@ -651,6 +664,12 @@ class CampaignView(APIView):
                 {"error": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
+        smtp_server_ids = list(
+            Campaign.objects.get(id=campaign_id).smtp_servers.values_list(
+                "id", flat=True
+            )
+        )
+        campaign["smtp_server_ids"] = smtp_server_ids
         return Response(campaign, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
