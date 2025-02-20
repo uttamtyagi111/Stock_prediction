@@ -10,7 +10,7 @@ from django.core.mail import EmailMessage
 import secrets
 
 def generate_otp():
-    return str(secrets.randbelow(900000) + 100000)  
+    return str(secrets.randbelow(900000) + 100000)
 
 
 def send_otp_email(email, otp, username):
@@ -28,14 +28,14 @@ def send_otp_email(email, otp, username):
         from_email=from_email,
         to=[email],
     )
-    email_message.content_subtype = "html"  
+    email_message.content_subtype = "html"
     email_message.send()
 
 
 def send_password_reset_email(user, base_url):
     """
     Sends password reset email to the specified user.
-    
+
     :param user: User object (the recipient)
     :param base_url: The base URL of the site to generate the reset link
     :return: None
@@ -43,7 +43,7 @@ def send_password_reset_email(user, base_url):
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     reset_link = f"{base_url}/reset_password/{uidb64}/{token}/"
-    
+
 
     html_content = render_to_string('emails/password_reset_email.html', {'reset_link': reset_link, 'username': user.username})
     subject = 'Your Wish Geeks Techserve Password Reset Request'
@@ -51,7 +51,7 @@ def send_password_reset_email(user, base_url):
 
     email_message = EmailMultiAlternatives(
         subject=subject,
-        body=f"Click the link to reset your password: {reset_link}",  
+        body=f"Click the link to reset your password: {reset_link}",
         from_email=from_email,
         to=[user.email]
     )
@@ -90,7 +90,7 @@ from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.conf import settings
 
-logger = logging.getLogger(__name__)  # ✅ Logging setup
+logger = logging.getLogger(__name__)
 
 def send_logout_otp_email(email,username, otp):
     """
@@ -108,7 +108,7 @@ def send_logout_otp_email(email,username, otp):
             from_email=from_email,
             to=[email],
         )
-        email_message.content_subtype = "html"  
+        email_message.content_subtype = "html"
 
         email_message.send(fail_silently=False)
         logger.info(f"Logout OTP email sent successfully to {email}")
@@ -134,7 +134,7 @@ def send_login_otp_email(email,username, otp):
             from_email=from_email,
             to=[email],
         )
-        email_message.content_subtype = "html"  
+        email_message.content_subtype = "html"
 
         email_message.send(fail_silently=False)
         logger.info(f"Login OTP email sent successfully to {email}")

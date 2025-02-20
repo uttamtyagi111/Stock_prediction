@@ -1,7 +1,8 @@
 from django.apps import AppConfig
 
+
 class SubscriptionsConfig(AppConfig):
-    name = 'subscriptions'
+    name = "subscriptions"
 
     def ready(self):
-        import subscriptions.signals  
+        import subscriptions.signals
