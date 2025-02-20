@@ -619,7 +619,7 @@ class CampaignListView(APIView):
                     "delay_seconds": campaign.delay_seconds,
                     "uploaded_file_name": campaign.uploaded_file_name,
                     "display_name": campaign.display_name,
-                    "smtp_server_ids": list(campaign.smtp_servers.values_list("id", flat=True)),  # ✅ SMTP Server IDs List
+                    "smtp_server_ids": list(campaign.smtp_servers.values_list("id", flat=True)),  
                 })
 
             logger.info(f"User {request.user.email} retrieved {len(campaign_data)} campaigns.")
