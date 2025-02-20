@@ -91,3 +91,27 @@ class LoginOTPAdmin(admin.ModelAdmin):
 
 
 admin.site.register(LoginOTP, LoginOTPAdmin)
+
+
+from django.contrib import admin
+from .models import Enquiry
+
+@admin.register(Enquiry)
+class EnquiryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'phone', 'subject', 'created_at')
+    search_fields = ('name', 'email', 'phone', 'subject')
+    list_filter = ('created_at',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        ('Personal Information', {
+            'fields': ('name', 'phone', 'email')
+        }),
+        ('Enquiry Details', {
+            'fields': ('subject', 'description')
+        }),
+        ('Metadata', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
