@@ -99,9 +99,6 @@ class ContactAdmin(admin.ModelAdmin):
     make_unsubscribed.short_description = "Mark selected contacts as unsubscribed"
 
 
-# Make the data field read-only
-
-
 @admin.register(Campaign)
 class CampaignAdmin(admin.ModelAdmin):
     list_display = (
@@ -127,3 +124,19 @@ class UnsubscribedAdmin(admin.ModelAdmin):
     )  # Update fields here
     list_filter = ("contact_file_name", "unsubscribed_at")  # Update fields here
     search_fields = ("email", "contact_file_name")  # Allow searching by these fields
+
+
+# from django.contrib import admin
+# from .models import Campaign, SMTPServer
+
+# class SMTPServerInline(admin.TabularInline):  
+#     model = Campaign.smtp_servers.through  # ManyToManyField ka through model use karna hoga
+#     extra = 1  # Kitne extra blank fields dikhe admin panel me
+
+# @admin.register(Campaign)
+# class CampaignAdmin(admin.ModelAdmin):
+#     list_display = ('name', 'user', 'subject', 'created_at', 'updated_at')
+#     search_fields = ('name', 'user__email')
+#     list_filter = ('created_at',)
+#     filter_horizontal = ('smtp_servers',)  # Multi-select box ke liye
+#     inlines = [SMTPServerInline]  # Inline SMTP Server edit option add kiya

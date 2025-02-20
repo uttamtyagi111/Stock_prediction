@@ -210,11 +210,22 @@ class UploadedFileList(APIView):
         return Response(serializer.data)
     
     
+    
+class UploadedFileDetails(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self,request,file_id):
+        uploaded_files = get_object_or_404(UploadedFile,id=file_id, user=request.user)
+        serializer = UploadedFileSerializer(uploaded_files)
+        return Response(serializer.data)
+        
+    
+        
 class UpdateUploadedFile(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, file_id):
-        uploaded_file = get_object_or_404(UploadedFile, id=file_id)
+        uploaded_file = get_object_or_404(UploadedFile, id=file_id,user=request.user)
 
         s3 = boto3.client(
             "s3",
@@ -228,11 +239,9 @@ class UpdateUploadedFile(APIView):
         if not new_user_given_name.endswith(".html"):
             new_user_given_name += ".html"
 
-        # 🟢 Keep old S3 key (file remains stored under same key)
-        existing_s3_key = uploaded_file.key  # Assume file_key field exists in model
+        existing_s3_key = uploaded_file.key 
 
         try:
-            # Delete old file from S3
             s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_s3_key)
         except Exception as e:
             return Response(
@@ -247,7 +256,6 @@ class UpdateUploadedFile(APIView):
 
         file = request.FILES["file"]
 
-        # 🟢 Generate unique S3 key based on filename
         counter = 1
         new_s3_key = existing_s3_key
 
@@ -260,7 +268,6 @@ class UpdateUploadedFile(APIView):
                 break
 
         try:
-            # Upload new file to S3
             s3.put_object(
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
                 Key=new_s3_key,
@@ -272,7 +279,6 @@ class UpdateUploadedFile(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # 🟢 Save new user-defined name & updated S3 key in database
         uploaded_file.name = new_user_given_name  # User-defined name
         uploaded_file.key = new_s3_key  # S3 key
         uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_s3_key}"  # Generate new file URL
@@ -287,6 +293,36 @@ class UpdateUploadedFile(APIView):
             },
             status=status.HTTP_200_OK,
         )
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
+from .models import UploadedFile
+
+class UploadedFileDelete(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, file_id):
+        uploaded_file = get_object_or_404(UploadedFile, id=file_id, user=request.user)
+
+        file_key = uploaded_file.key  
+        try:
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+            )
+
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            s3_client.delete_object(Bucket=bucket_name, Key=file_key)
+            uploaded_file.delete()
+
+            return Response({"message": "File deleted successfully"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # class UpdateUploadedFile(APIView):
