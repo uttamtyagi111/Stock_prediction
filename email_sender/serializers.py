@@ -106,15 +106,20 @@ class CampaignSerializer(serializers.Serializer):
 
         return data
 
-    def validate_name(self, value):
-        """Ensure the campaign name is unique for the user."""
-        request = self.context.get("request")
-        if request and hasattr(request, "user"):
-            if Campaign.objects.filter(name=value, user=request.user).exists():
-                raise serializers.ValidationError(
-                    "A campaign with this name already exists for the user."
-                )
-        return value
+def validate_name(self, value):
+    """Ensure the campaign name is unique for the user when creating a new campaign."""
+    request = self.context.get("request")
+    campaign_id = self.instance.id if self.instance else None  # Current campaign ID
+
+    if request and hasattr(request, "user"):
+        # Agar naya campaign create ho raha hai (POST) ya naam change ho raha hai (PUT)
+        if Campaign.objects.filter(name=value, user=request.user).exclude(id=campaign_id).exists():
+            raise serializers.ValidationError(
+                "A campaign with this name already exists for the user."
+            )
+
+    return value
+
 
     def to_representation(self, instance):
         """Ensure `id` is included in the response."""

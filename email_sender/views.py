@@ -208,8 +208,8 @@ class UploadedFileList(APIView):
         uploaded_files = UploadedFile.objects.filter(user=request.user)
         serializer = UploadedFileSerializer(uploaded_files, many=True)
         return Response(serializer.data)
-
-
+    
+    
 class UpdateUploadedFile(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -223,12 +223,17 @@ class UpdateUploadedFile(APIView):
             region_name=settings.AWS_S3_REGION_NAME,
         )
 
-        existing_file_name = uploaded_file.name
+        new_user_given_name = request.data.get("name", uploaded_file.name)
+
+        if not new_user_given_name.endswith(".html"):
+            new_user_given_name += ".html"
+
+        # 🟢 Keep old S3 key (file remains stored under same key)
+        existing_s3_key = uploaded_file.key  # Assume file_key field exists in model
 
         try:
-            s3.delete_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_file_name
-            )
+            # Delete old file from S3
+            s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_s3_key)
         except Exception as e:
             return Response(
                 {"error": f"Failed to delete old file: {str(e)}"},
@@ -242,23 +247,23 @@ class UpdateUploadedFile(APIView):
 
         file = request.FILES["file"]
 
+        # 🟢 Generate unique S3 key based on filename
         counter = 1
-        new_file_name = existing_file_name
+        new_s3_key = existing_s3_key
 
         while True:
             try:
-                s3.head_object(
-                    Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=new_file_name
-                )
-                new_file_name = f"{existing_file_name.split('.')[0]}({counter}).{existing_file_name.split('.')[-1]}"
+                s3.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=new_s3_key)
+                new_s3_key = f"{existing_s3_key.split('.')[0]}({counter}).{existing_s3_key.split('.')[-1]}"
                 counter += 1
             except s3.exceptions.ClientError:
                 break
 
         try:
+            # Upload new file to S3
             s3.put_object(
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-                Key=new_file_name,
+                Key=new_s3_key,
                 Body=file,
                 ContentType="text/html",
             )
@@ -267,14 +272,88 @@ class UpdateUploadedFile(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        uploaded_file.name = new_file_name
-        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_file_name}"
+        # 🟢 Save new user-defined name & updated S3 key in database
+        uploaded_file.name = new_user_given_name  # User-defined name
+        uploaded_file.key = new_s3_key  # S3 key
+        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_s3_key}"  # Generate new file URL
         uploaded_file.save()
 
         return Response(
-            {"file_name": new_file_name, "file_url": uploaded_file.file_url},
+            {
+                "message": "File updated successfully.",
+                "file_name": uploaded_file.name,  # User-given name
+                "file_key": uploaded_file.key,  # S3 storage key
+                "file_url": uploaded_file.file_url,  # Public URL
+            },
             status=status.HTTP_200_OK,
         )
+
+
+# class UpdateUploadedFile(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def put(self, request, file_id):
+#         uploaded_file = get_object_or_404(UploadedFile, id=file_id)
+
+#         s3 = boto3.client(
+#             "s3",
+#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+#             region_name=settings.AWS_S3_REGION_NAME,
+#         )
+
+#         existing_file_name = uploaded_file.name
+
+#         try:
+#             s3.delete_object(
+#                 Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_file_name
+#             )
+#         except Exception as e:
+#             return Response(
+#                 {"error": f"Failed to delete old file: {str(e)}"},
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             )
+
+#         if "file" not in request.FILES:
+#             return Response(
+#                 {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         file = request.FILES["file"]
+
+#         counter = 1
+#         new_file_name = existing_file_name
+
+#         while True:
+#             try:
+#                 s3.head_object(
+#                     Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=new_file_name
+#                 )
+#                 new_file_name = f"{existing_file_name.split('.')[0]}({counter}).{existing_file_name.split('.')[-1]}"
+#                 counter += 1
+#             except s3.exceptions.ClientError:
+#                 break
+
+#         try:
+#             s3.put_object(
+#                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+#                 Key=new_file_name,
+#                 Body=file,
+#                 ContentType="text/html",
+#             )
+#         except Exception as e:
+#             return Response(
+#                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+
+#         uploaded_file.name = new_file_name
+#         uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_file_name}"
+#         uploaded_file.save()
+
+#         return Response(
+#             {"file_name": new_file_name, "file_url": uploaded_file.file_url},
+#             status=status.HTTP_200_OK,
+#         )
 
 
 class FileUploadView(APIView):
