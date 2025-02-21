@@ -1,3 +1,4 @@
+from django.shortcuts import redirect
 import base64
 import hashlib
 import json
@@ -112,8 +113,6 @@ def upgrade_plan(request):
     Allows authenticated users to upgrade to a new plan.
     """
     plan_name = request.data.get("plan_name")
-
-    # Fetch all available plans from the database in sorted order
     available_plans = list(
         Plan.objects.order_by("level").values_list("name", flat=True)
     )
@@ -128,7 +127,6 @@ def upgrade_plan(request):
         user_profile = UserProfile.objects.get(user=request.user)
         new_plan = Plan.objects.get(name__iexact=plan_name)
 
-        # Fetch the indexes dynamically from the Plan model
         current_plan_index = (
             available_plans.index(user_profile.current_plan.name)
             if user_profile.current_plan
@@ -142,21 +140,16 @@ def upgrade_plan(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Expiration date should remain the same
         existing_expiration_date = user_profile.plan_expiration_date
 
-        # Update the user profile with the new plan
         user_profile.plan_name = new_plan.name
         user_profile.current_plan = new_plan
         user_profile.plan_status = "initiated"
         user_profile.email_limit += (
             new_plan.email_limit
-        )  # Keep old email limit + new plan's limit
+        ) 
         user_profile.plan_start_date = timezone.now()
-
-        # Keep the old expiration date
         user_profile.plan_expiration_date = existing_expiration_date
-
         user_profile.save()
 
         return Response(
@@ -272,7 +265,6 @@ def create_order(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Return order details for frontend processing
         return Response(
             {
                 "razorpay_order_id": razorpay_order["id"],
@@ -382,7 +374,6 @@ PHONEPE_URL = settings.PHONEPE_URL
 @permission_classes([IsAuthenticated])
 def initiate_payment(request):
     try:
-        # Extract form data safely
         data = request.data
         merchant_transaction_id = data.get("transactionId")
         name = data.get("name")
@@ -390,7 +381,6 @@ def initiate_payment(request):
         mobile = data.get("mobile")
         plan_name = data.get("plan_name")
 
-        # Billing Address Fields
         address_line1 = data.get("address_line1")
         address_line2 = data.get("address_line2", "")
         city = data.get("city")
@@ -398,7 +388,7 @@ def initiate_payment(request):
         zip_code = data.get("zip_code")
         country = data.get("country")
 
-        # Validate required fields
+
         required_fields = {
             "transactionId": merchant_transaction_id,
             "name": name,
@@ -420,13 +410,11 @@ def initiate_payment(request):
                 status=400,
             )
 
-        # Convert amount to paise
         try:
             amount = int(amount) * 100
         except ValueError:
             return JsonResponse({"error": "Invalid amount format"}, status=400)
 
-        # Validate selected plan
         valid_plans = ["Basic", "Standard", "Premium", "Elite"]
         if plan_name not in valid_plans:
             return Response(
@@ -434,21 +422,17 @@ def initiate_payment(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Fetch the selected plan
         try:
             plan = Plan.objects.get(name__iexact=plan_name)
         except Plan.DoesNotExist:
             return JsonResponse({"error": "Plan not found"}, status=404)
 
-        # Ensure user has a profile
         user_profile = UserProfile.objects.get(user=request.user)
-        # Check if the user already has the same plan
         if user_profile.current_plan and user_profile.current_plan.name == plan_name:
             return JsonResponse(
                 {"error": f"You have already purchased the {plan_name} plan."},
                 status=400,
             )
-        # Update billing address
         user_profile.address_line1 = address_line1
         user_profile.address_line2 = address_line2
         user_profile.city = city
@@ -456,7 +440,6 @@ def initiate_payment(request):
         user_profile.zip_code = zip_code
         user_profile.country = country
 
-        # Construct PhonePe payment payload
         payload = {
             "merchantId": MERCHANT_ID,
             "merchantTransactionId": merchant_transaction_id,
@@ -470,7 +453,6 @@ def initiate_payment(request):
             "paymentInstrument": {"type": "PAY_PAGE"},
         }
 
-        # Encode payload and generate checksum
         payload_encoded = base64.b64encode(json.dumps(payload).encode()).decode()
         checksum_string = f"{payload_encoded}/pg/v1/pay{SALT_KEY}"
         checksum_hash = hashlib.sha256(checksum_string.encode()).hexdigest()
@@ -483,15 +465,13 @@ def initiate_payment(request):
         }
         api_payload = {"request": payload_encoded}
 
-        # Call PhonePe API
         response = requests.post(PHONEPE_URL, headers=headers, json=api_payload)
         response_data = response.json()
 
         if response.status_code == 200 and response_data.get("success"):
-            # Update user profile with transaction details
             user_profile.phonepe_transaction_id = merchant_transaction_id
             user_profile.current_plan = plan
-            user_profile.plan_status = "inactive"  # Until payment is confirmed
+            user_profile.plan_status = "inactive" 
             user_profile.payment_status = "initiated"
             user_profile.pending_plan_id = plan.id
             user_profile.save()
@@ -510,7 +490,6 @@ def initiate_payment(request):
 import hashlib
 import requests
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.shortcuts import redirect
 
 from rest_framework.permissions import AllowAny
 
@@ -523,14 +502,12 @@ def verify_payment(request):
         if not merchant_transaction_id:
             return JsonResponse({"error": "Transaction ID is required"}, status=400)
 
-        # Generate checksum for verifying the payment
         checksum_string = (
             f"/pg/v1/status/{MERCHANT_ID}/{merchant_transaction_id}{SALT_KEY}"
         )
         checksum_hash = hashlib.sha256(checksum_string.encode()).hexdigest()
         checksum = f"{checksum_hash}###1"
 
-        # Prepare headers for the API call
         headers = {
             "accept": "application/json",
             "Content-Type": "application/json",
@@ -538,26 +515,28 @@ def verify_payment(request):
             "X-MERCHANT-ID": MERCHANT_ID,
         }
 
-        # Call PhonePe API to verify payment status
         response = requests.get(
             f"{VERIFY_URL}/{MERCHANT_ID}/{merchant_transaction_id}", headers=headers
         )
         response_data = response.json()
 
         if response_data.get("success"):
-            # Extract payment status
             payment_status = response_data.get("data", {}).get("status", "").lower()
-
-            # Find the user profile associated with the transaction
             user_profile = UserProfile.objects.get(
                 phonepe_transaction_id=merchant_transaction_id
             )
 
+            if payment_status == "success":
+                plan = Plan.objects.get(id=user_profile.pending_plan_id)
+                user_profile.activate_plan(plan)
+                user_profile.plan_status = "active" 
+                user_profile.payment_status = "paid" 
+                user_profile.save()
+
             if payment_status == "":
-                # Retrieve the plan details from the database
                 plan = Plan.objects.get(
                     id=user_profile.pending_plan_id
-                )  # Assuming `pending_plan_id` was saved earlier
+                )  
 
                 user_profile.activate_plan(plan)
 
@@ -568,18 +547,14 @@ def verify_payment(request):
                     expiry_date=user_profile.plan_expiration_date,
                     user_email=user_profile.user.email,
                 )
-
-                # Redirect or respond with success
                 return redirect("http://localhost:8000/payment-success")
             else:
-                # Handle failed or pending payments
                 user_profile.plan_status = "inactive"
                 user_profile.payment_status = payment_status
                 user_profile.save()
 
                 return redirect("http://localhost:8000/payment-failed")
         else:
-            # API call failed, log the error and return failure
             return JsonResponse(
                 {"error": response_data.get("message", "Payment verification failed.")},
                 status=400,
@@ -597,7 +572,6 @@ def verify_payment(request):
 
 
 from django.shortcuts import render
-
 
 def payment_success(request):
     """Handle successful payments."""
