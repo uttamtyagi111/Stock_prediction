@@ -208,24 +208,22 @@ class UploadedFileList(APIView):
         uploaded_files = UploadedFile.objects.filter(user=request.user)
         serializer = UploadedFileSerializer(uploaded_files, many=True)
         return Response(serializer.data)
-    
-    
-    
+
+
 class UploadedFileDetails(APIView):
     permission_classes = [IsAuthenticated]
-    
-    def get(self,request,file_id):
-        uploaded_files = get_object_or_404(UploadedFile,id=file_id, user=request.user)
+
+    def get(self, request, file_id):
+        uploaded_files = get_object_or_404(UploadedFile, id=file_id, user=request.user)
         serializer = UploadedFileSerializer(uploaded_files)
         return Response(serializer.data)
-        
-    
-        
+
+
 class UpdateUploadedFile(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, file_id):
-        uploaded_file = get_object_or_404(UploadedFile, id=file_id,user=request.user)
+        uploaded_file = get_object_or_404(UploadedFile, id=file_id, user=request.user)
 
         s3 = boto3.client(
             "s3",
@@ -239,10 +237,12 @@ class UpdateUploadedFile(APIView):
         if not new_user_given_name.endswith(".html"):
             new_user_given_name += ".html"
 
-        existing_s3_key = uploaded_file.key 
+        existing_s3_key = uploaded_file.key
 
         try:
-            s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_s3_key)
+            s3.delete_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=existing_s3_key
+            )
         except Exception as e:
             return Response(
                 {"error": f"Failed to delete old file: {str(e)}"},
@@ -279,27 +279,23 @@ class UpdateUploadedFile(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        uploaded_file.name = new_user_given_name  # User-defined name
-        uploaded_file.key = new_s3_key  # S3 key
-        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_s3_key}"  # Generate new file URL
+        uploaded_file.name = new_user_given_name
+        uploaded_file.key = new_s3_key 
+        uploaded_file.file_url = (
+            f"{settings.AWS_S3_FILE_URL}{new_s3_key}" 
+        )
         uploaded_file.save()
 
         return Response(
             {
                 "message": "File updated successfully.",
-                "file_name": uploaded_file.name,  # User-given name
-                "file_key": uploaded_file.key,  # S3 storage key
-                "file_url": uploaded_file.file_url,  # Public URL
+                "file_name": uploaded_file.name, 
+                "file_key": uploaded_file.key,  
+                "file_url": uploaded_file.file_url, 
             },
             status=status.HTTP_200_OK,
         )
-from django.conf import settings
-from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
-from .models import UploadedFile
+
 
 class UploadedFileDelete(APIView):
     permission_classes = [IsAuthenticated]
@@ -307,22 +303,25 @@ class UploadedFileDelete(APIView):
     def delete(self, request, file_id):
         uploaded_file = get_object_or_404(UploadedFile, id=file_id, user=request.user)
 
-        file_key = uploaded_file.key  
+        file_key = uploaded_file.key
         try:
             s3_client = boto3.client(
-                's3',
+                "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             )
 
             bucket_name = settings.AWS_STORAGE_BUCKET_NAME
             s3_client.delete_object(Bucket=bucket_name, Key=file_key)
             uploaded_file.delete()
 
-            return Response({"message": "File deleted successfully"}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "File deleted successfully"}, status=status.HTTP_200_OK
+            )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # class UpdateUploadedFile(APIView):
@@ -410,7 +409,6 @@ class ContactUploadView(APIView):
     def post(self, request):
         user = request.user
 
-        # Check if the user has reached the upload limit
         if ContactFile.objects.filter(user=user).count() >= 10:
             return Response(
                 {
@@ -431,7 +429,6 @@ class ContactUploadView(APIView):
                 {"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check for unique file name
         if ContactFile.objects.filter(user=user, name=file_name).exists():
             return Response(
                 {
@@ -440,7 +437,6 @@ class ContactUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate and parse the CSV file
         try:
             decoded_file = csv_file.read().decode("utf-8")
             reader = csv.DictReader(StringIO(decoded_file))
@@ -453,25 +449,24 @@ class ContactUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Create a new ContactFile object with the current timestamp
         contact_file = ContactFile.objects.create(user=user, name=file_name)
 
         contacts = []
-        row_count = 0  # Counter for valid rows
+        row_count = 0  
         for row in reader:
-            if any(row.values()):  # Ensure the row has data
+            if any(row.values()): 
                 contacts.append(Contact(contact_file=contact_file, data=row))
-                row_count += 1  # Increment only for valid rows
+                row_count += 1  
         Contact.objects.bulk_create(contacts)
 
         return Response(
             {
                 "message": "Contacts uploaded and saved successfully.",
                 "file_name": file_name,
-                "total_contacts": row_count,  # Number of valid rows excluding the header
+                "total_contacts": row_count, 
                 "created_at": contact_file.uploaded_at.strftime(
                     "%Y-%m-%d %H:%M:%S"
-                ),  # Format the creation date
+                ),
             },
             status=status.HTTP_201_CREATED,
         )
@@ -484,7 +479,7 @@ class ContactListView(APIView):
         user = request.user
         file_id = request.query_params.get(
             "file_id"
-        )  # Get file_id from query parameters
+        ) 
 
         if not file_id:
             return Response(
@@ -502,7 +497,6 @@ class ContactListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Fetch all contacts for the given file
         contacts = Contact.objects.filter(contact_file=contact_file).values("data")
         return Response(
             {"file_name": contact_file.name, "contacts": list(contacts)},
@@ -510,20 +504,11 @@ class ContactListView(APIView):
         )
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .models import ContactFile, Contact
-
-
 class UserContactListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user  # Get the logged-in user
-
-        # Fetch all contact files of the user
+        user = request.user  
         contact_files = ContactFile.objects.filter(user=user)
 
         if not contact_files.exists():
@@ -532,7 +517,6 @@ class UserContactListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Fetch contacts for each file
         contact_list = []
         for contact_file in contact_files:
             contacts = Contact.objects.filter(contact_file=contact_file).values("data")
@@ -543,7 +527,7 @@ class UserContactListView(APIView):
                     "contacts": list(contacts),
                     "created_at": contact_file.uploaded_at.strftime(
                         "%Y-%m-%d %H:%M:%S"
-                    ),  # Convert queryset to list
+                    ), 
                 }
             )
 
@@ -561,7 +545,6 @@ class ContactFileUpdateView(APIView):
         user = request.user
 
         try:
-            # Ensure the file belongs to the user
             contact_file = ContactFile.objects.get(id=file_id, user=user)
         except ContactFile.DoesNotExist:
             return Response(
@@ -570,8 +553,6 @@ class ContactFileUpdateView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
-
-        # Get the updated contacts from the request
         contacts_data = request.data.get("contacts")
         if not contacts_data:
             return Response(
@@ -579,26 +560,26 @@ class ContactFileUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        updated_contacts = []  # List to hold updated contacts
-        row_count = 0  # Counter for valid rows
-        new_rows_count = 0  # Counter for new rows
+        updated_contacts = []  
+        row_count = 0 
+        new_rows_count = 0
 
         for row in contacts_data:
-            contact_id = row.get("id")  # Assuming each contact has an 'id'
-            if contact_id:  # Update existing contact
+            contact_id = row.get("id")  
+            if contact_id: 
                 try:
                     contact = Contact.objects.get(
                         id=contact_id, contact_file=contact_file
                     )
                     contact.data.update(
                         row.get("data", {})
-                    )  # Update the contact fields
+                    )  
                     contact.save()
                     updated_contacts.append(contact)
                     row_count += 1
                 except Contact.DoesNotExist:
                     continue
-            else:  # Add new row if id is not found
+            else: 
                 new_row = row.get("data", {})
                 if new_row:
                     contact = Contact(contact_file=contact_file, data=new_row)
@@ -611,18 +592,11 @@ class ContactFileUpdateView(APIView):
                 "message": "Contacts updated and new rows added successfully.",
                 "file_name": contact_file.name,
                 "total_contacts_updated": row_count,
-                "total_new_rows": new_rows_count,  # Number of new rows added
+                "total_new_rows": new_rows_count, 
                 "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
             },
             status=status.HTTP_200_OK,
         )
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .models import ContactFile, Contact
 
 
 class DeleteContactListView(APIView):
@@ -648,7 +622,6 @@ class DeleteContactListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Delete all contacts associated with this file
         Contact.objects.filter(contact_file=contact_file).delete()
 
         contact_file.delete()
@@ -663,23 +636,18 @@ class ContactUnsubscribeView(APIView):
 
     def delete(self, request, contact_file_id, contact_id):
         try:
-            # Fetch the contact and contact file
             contact = Contact.objects.get(
                 id=contact_id, contact_file_id=contact_file_id
             )
             contact_file = ContactFile.objects.get(id=contact_file_id)
 
-            # Add the unsubscription event to the Unsubscribed table
+
             unsubscribed_entry = Unsubscribed.objects.create(
-                email=contact.data.get("Email"),  # Extract email directly
-                contact_file_name=contact_file.name,  # Store contact file name directly
+                email=contact.data.get("Email"), 
+                contact_file_name=contact_file.name, 
             )
             contact.delete()
-
-            # Check if unsubscribed entry was created successfully
             if unsubscribed_entry:
-                # Now delete the contact from the Contact table
-
                 return Response(
                     {
                         "message": "Unsubscribed successfully",
@@ -707,46 +675,49 @@ class ContactUnsubscribeView(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from django.db.models import Prefetch
-import logging
-from .models import Campaign, SMTPServer
 
 logger = logging.getLogger(__name__)
+
 
 class CampaignListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         try:
-            campaigns = Campaign.objects.filter(user=request.user).prefetch_related("smtp_servers")
+            campaigns = Campaign.objects.filter(user=request.user).prefetch_related(
+                "smtp_servers"
+            )
 
             campaign_data = []
             for campaign in campaigns:
-                campaign_data.append({
-                    "id": campaign.id,
-                    "name": campaign.name,
-                    "subject": campaign.subject,
-                    "contact_list_id": campaign.contact_list_id,
-                    "delay_seconds": campaign.delay_seconds,
-                    "uploaded_file_name": campaign.uploaded_file_name,
-                    "display_name": campaign.display_name,
-                    "smtp_server_ids": list(campaign.smtp_servers.values_list("id", flat=True)),  
-                })
+                campaign_data.append(
+                    {
+                        "id": campaign.id,
+                        "name": campaign.name,
+                        "subject": campaign.subject,
+                        "contact_list_id": campaign.contact_list_id,
+                        "delay_seconds": campaign.delay_seconds,
+                        "uploaded_file_name": campaign.uploaded_file_name,
+                        "display_name": campaign.display_name,
+                        "smtp_server_ids": list(
+                            campaign.smtp_servers.values_list("id", flat=True)
+                        ),
+                    }
+                )
 
-            logger.info(f"User {request.user.email} retrieved {len(campaign_data)} campaigns.")
+            logger.info(
+                f"User {request.user.email} retrieved {len(campaign_data)} campaigns."
+            )
             return Response(campaign_data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"Error retrieving campaigns for user {request.user.email}: {str(e)}")
+            logger.error(
+                f"Error retrieving campaigns for user {request.user.email}: {str(e)}"
+            )
             return Response(
                 {"error": "Failed to retrieve campaigns"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
 
 
 class CampaignView(APIView):
@@ -807,7 +778,6 @@ class CampaignView(APIView):
             display_name = serializer.validated_data["display_name"]
 
             logger.debug(f"Received Data: {serializer.validated_data}")
-            # Validate the contact file
             try:
                 contact_file = ContactFile.objects.get(
                     id=contact_file_id, user=request.user
@@ -828,7 +798,7 @@ class CampaignView(APIView):
                     },
                     status=status.HTTP_404_NOT_FOUND,
                 )
-            # Save the campaign in the database
+
             campaign = Campaign.objects.create(
                 name=name,
                 user=request.user,
@@ -838,7 +808,7 @@ class CampaignView(APIView):
                 delay_seconds=delay_seconds,
                 contact_list=contact_file,
             )
-            # Debugging: Check if campaign ID is generated
+
             if not campaign.id:
                 logger.error("Campaign ID is missing after creation.")
                 return Response(
@@ -848,9 +818,7 @@ class CampaignView(APIView):
 
             logger.debug(f"Campaign Created Successfully: ID = {campaign.id}")
 
-            campaign.smtp_servers.set(
-                smtp_servers
-            )  # Link the SMTP servers to the campaign
+            campaign.smtp_servers.set(smtp_servers)
 
             contacts = contact_file.contacts.all()
             contact_serializer = ContactSerializer(contacts, many=True)
@@ -987,7 +955,6 @@ class SendEmailsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Fetch SMTP servers
         smtp_server_ids = campaign.smtp_servers.values_list("id", flat=True)
         smtp_servers = SMTPServer.objects.filter(id__in=smtp_server_ids, user=user)
         if not smtp_servers.exists():
@@ -995,8 +962,6 @@ class SendEmailsView(APIView):
                 {"error": "No valid SMTP servers found for this campaign."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Check user email limits and plan status
         can_send, message = profile.can_send_email()
         if not can_send:
             return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
@@ -1030,15 +995,12 @@ class SendEmailsView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Retrieve campaign data
-        # contact_file = campaign.contact_list
         smtp_server_ids = campaign.smtp_servers.values_list("id", flat=True)
         uploaded_file_name = campaign.uploaded_file_name
         display_name = campaign.display_name
         delay_seconds = campaign.delay_seconds
         subject = campaign.subject
 
-        # Retrieve the email template content
         try:
             file_content = self.get_html_content_from_s3(uploaded_file_name)
         except Exception as e:
@@ -1132,9 +1094,9 @@ class SendEmailsView(APIView):
             ).first()
 
             if contact:
-                contact_id = contact.id  # Get the ID of the matching contact
+                contact_id = contact.id
             else:
-                contact_id = None  # No contact found for this email
+                contact_id = None
             file_id = contact_file.id
 
             unsubscribe_url = f"{request.scheme}://{request.get_host()}/contact-files/{file_id}/unsubscribe/{contact_id}/"
