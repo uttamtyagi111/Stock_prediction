@@ -893,23 +893,44 @@ class CampaignView(APIView):
 
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
-
-    def get_html_content_from_s3(self, key):
-        """Fetches HTML content from S3 based on the file key provided."""
+    def get_html_content_from_s3(uploaded_file_name):
+        """Fetches HTML content from S3 using the file name by retrieving the key from the database."""
         try:
-            s3 = boto3.client(
+            # Pehle database se uploaded file ka key dhundo
+            uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
+
+            if not uploaded_file:
+                logger.error(f"No file found in database with name: {uploaded_file_name}")
+                return None
+            
+            key = uploaded_file.key  # Ye column check kar lo tumhare model me
+
+            # AWS S3 Client
+            session = boto3.session.Session()
+            s3 = session.client(
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_S3_REGION_NAME,
             )
-            s3_object = s3.get_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key
-            )
-            return s3_object["Body"].read().decode("utf-8")
+
+            # S3 se file fetch karna
+            response = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+
+            if "Body" in response:
+                return response["Body"].read().decode("utf-8")
+
+            logger.error(f"File {key} found in S3 but has no content.")
+            return None
+
+        except s3.exceptions.NoSuchKey:
+            logger.error(f"File {key} does not exist in S3.")
+        except s3.exceptions.ClientError as e:
+            logger.error(f"Client error while fetching {key} from S3: {e}")
         except Exception as e:
-            logger.error(f"Error fetching file from S3: {str(e)}")
-            raise
+            logger.error(f"Unexpected error fetching file from S3: {str(e)}")
+
+        return None
 
     def validate_email_domain(self, email):
         """Validate if the email domain has valid MX records."""
