@@ -893,7 +893,7 @@ class CampaignView(APIView):
 
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
-    def get_html_content_from_s3(uploaded_file_name):
+    def get_html_content_from_s3(self,uploaded_file_name):
         """Fetches HTML content from S3 using the file name by retrieving the key from the database."""
         try:
             # Pehle database se uploaded file ka key dhundo
