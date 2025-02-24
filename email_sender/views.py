@@ -887,7 +887,7 @@ class CampaignView(APIView):
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
 
-    def get_html_content_from_s3(self, uploaded_file_key):
+    def get_html_content_from_s3(self, key):
         """Fetches HTML content from S3 based on the file key provided."""
         try:
             s3 = boto3.client(
@@ -897,7 +897,7 @@ class SendEmailsView(APIView):
                 region_name=settings.AWS_S3_REGION_NAME,
             )
             s3_object = s3.get_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=uploaded_file_key
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key
             )
             return s3_object["Body"].read().decode("utf-8")
         except Exception as e:
