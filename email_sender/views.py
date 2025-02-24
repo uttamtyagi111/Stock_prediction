@@ -403,13 +403,82 @@ class FileUploadView(APIView):
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class ContactUploadView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request):
+#         user = request.user
+
+#         if ContactFile.objects.filter(user=user).count() >= 10:
+#             return Response(
+#                 {
+#                     "error": "You have already uploaded 10 contact lists. To upload a new list, please delete an existing one."
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+
+#         csv_file = request.FILES.get("csv_file")
+#         file_name = request.data.get("name")
+
+#         if not csv_file:
+#             return Response(
+#                 {"error": "CSV file is required."}, status=status.HTTP_400_BAD_REQUEST
+#             )
+#         if not file_name:
+#             return Response(
+#                 {"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         if ContactFile.objects.filter(user=user, name=file_name).exists():
+#             return Response(
+#                 {
+#                     "error": f'A file with the name "{file_name}" already exists. Please use a different name.'
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+
+#         try:
+#             decoded_file = csv_file.read().decode("utf-8")
+#             reader = csv.DictReader(StringIO(decoded_file))
+
+#             if not reader.fieldnames:
+#                 raise ValueError("CSV file is missing headers.")
+#         except Exception as e:
+#             return Response(
+#                 {"error": f"Invalid CSV file format: {str(e)}"},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+
+#         contact_file = ContactFile.objects.create(user=user, name=file_name)
+
+#         contacts = []
+#         row_count = 0  
+#         for row in reader:
+#             if any(row.values()): 
+#                 contacts.append(Contact(contact_file=contact_file, data=row))
+#                 row_count += 1  
+#         Contact.objects.bulk_create(contacts)
+
+#         return Response(
+#             {
+#                 "message": "Contacts uploaded and saved successfully.",
+#                 "file_name": file_name,
+#                 "total_contacts": row_count, 
+#                 "created_at": contact_file.uploaded_at.strftime(
+#                     "%Y-%m-%d %H:%M:%S"
+#                 ),
+#             },
+#             status=status.HTTP_201_CREATED,
+#         )
 class ContactUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
+        logger.info(f"User {user.email} is attempting to upload a contact file.")
 
         if ContactFile.objects.filter(user=user).count() >= 10:
+            logger.warning(f"User {user.email} has reached the maximum upload limit.")
             return Response(
                 {
                     "error": "You have already uploaded 10 contact lists. To upload a new list, please delete an existing one."
@@ -421,15 +490,18 @@ class ContactUploadView(APIView):
         file_name = request.data.get("name")
 
         if not csv_file:
+            logger.error(f"User {user.email} tried to upload without providing a CSV file.")
             return Response(
                 {"error": "CSV file is required."}, status=status.HTTP_400_BAD_REQUEST
             )
         if not file_name:
+            logger.error(f"User {user.email} tried to upload without providing a file name.")
             return Response(
                 {"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if ContactFile.objects.filter(user=user, name=file_name).exists():
+            logger.warning(f'User {user.email} tried to upload a duplicate file name: "{file_name}".')
             return Response(
                 {
                     "error": f'A file with the name "{file_name}" already exists. Please use a different name.'
@@ -443,13 +515,16 @@ class ContactUploadView(APIView):
 
             if not reader.fieldnames:
                 raise ValueError("CSV file is missing headers.")
+
         except Exception as e:
+            logger.error(f"User {user.email} uploaded an invalid CSV file: {str(e)}")
             return Response(
                 {"error": f"Invalid CSV file format: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         contact_file = ContactFile.objects.create(user=user, name=file_name)
+        logger.info(f'User {user.email} successfully uploaded file "{file_name}".')
 
         contacts = []
         row_count = 0  
@@ -457,20 +532,19 @@ class ContactUploadView(APIView):
             if any(row.values()): 
                 contacts.append(Contact(contact_file=contact_file, data=row))
                 row_count += 1  
+
         Contact.objects.bulk_create(contacts)
+        logger.info(f'User {user.email} - {row_count} contacts saved from "{file_name}".')
 
         return Response(
             {
                 "message": "Contacts uploaded and saved successfully.",
                 "file_name": file_name,
                 "total_contacts": row_count, 
-                "created_at": contact_file.uploaded_at.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
+                "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
             },
             status=status.HTTP_201_CREATED,
         )
-
 
 class ContactListView(APIView):
     permission_classes = [IsAuthenticated]
