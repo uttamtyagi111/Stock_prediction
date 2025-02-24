@@ -63,6 +63,12 @@ class CampaignSerializer(serializers.Serializer):
                 "The provided contact file ID does not exist."
             )
         return value
+    
+    
+    def get_file_url(uploaded_file_name):
+        uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
+        return uploaded_file.file_url if uploaded_file else None
+
 
     def validate_smtp_server_ids(self, value):
         if not value:

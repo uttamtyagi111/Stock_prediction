@@ -697,7 +697,7 @@ class CampaignListView(APIView):
                         "subject": campaign.subject,
                         "contact_list_id": campaign.contact_list_id,
                         "delay_seconds": campaign.delay_seconds,
-                        "uploaded_file_name": campaign.uploaded_file_name,
+                        "uploaded_file_name": campaign.uploaded_file_name, 
                         "display_name": campaign.display_name,
                         "smtp_server_ids": list(
                             campaign.smtp_servers.values_list("id", flat=True)
@@ -749,6 +749,12 @@ class CampaignView(APIView):
             return Response(
                 {"error": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
             )
+        uploaded_file_name = campaign.get("uploaded_file_name")
+        file_url = None
+        if uploaded_file_name:
+            uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
+            file_url = uploaded_file.file_url if uploaded_file else None
+
 
         smtp_server_ids = list(
             Campaign.objects.get(id=campaign_id).smtp_servers.values_list(
@@ -756,6 +762,7 @@ class CampaignView(APIView):
             )
         )
         campaign["smtp_server_ids"] = smtp_server_ids
+        campaign["file_url"] = file_url 
         return Response(campaign, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
