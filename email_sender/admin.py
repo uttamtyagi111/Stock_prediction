@@ -75,6 +75,7 @@ class ContactAdminForm(forms.ModelForm):
 class ContactAdmin(admin.ModelAdmin):
     form = ContactAdminForm
     list_display = (
+        "id",
         "contact_file",
         "data",
     )  # Display contact file and email in the list

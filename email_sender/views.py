@@ -571,7 +571,7 @@ class ContactListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        contacts = Contact.objects.filter(contact_file=contact_file).values("data")
+        contacts = Contact.objects.filter(contact_file=contact_file).values("id","data")
         return Response(
             {"file_name": contact_file.name, "contacts": list(contacts)},
             status=status.HTTP_200_OK,
