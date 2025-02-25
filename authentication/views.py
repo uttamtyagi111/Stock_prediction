@@ -420,11 +420,12 @@ class LogoutDeviceView(APIView):
                     {"error": f"Failed to blacklist old token: {str(e)}"},
                     status=HTTP_400_BAD_REQUEST,
                 )
+                
+            device.delete()
 
             new_refresh_token = RefreshToken.for_user(user)
             new_access_token = str(new_refresh_token.access_token)
 
-            device.delete()
 
             return Response(
                 {
