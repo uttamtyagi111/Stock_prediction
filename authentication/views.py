@@ -507,8 +507,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
-from .models import UserDevice  
-
 
 logger = logging.getLogger(__name__)
 
