@@ -573,7 +573,7 @@ def home(request):
     user = request.user
     data = {
         "message": "Welcome to the home page!",
-        "current_year": 2024,
+        "current_year": 2025,
         "user": {"username": user.username, "email": user.email},
     }
     return JsonResponse(data)
