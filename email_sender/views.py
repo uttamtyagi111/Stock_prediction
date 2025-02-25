@@ -607,6 +607,11 @@ class UserContactListView(APIView):
 
         return Response({"user_contact_files": contact_list}, status=status.HTTP_200_OK)
 
+from django.db import transaction
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
 class ContactFileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -622,11 +627,10 @@ class ContactFileUpdateView(APIView):
             contact_file = ContactFile.objects.get(id=file_id, user=user)
         except ContactFile.DoesNotExist:
             return Response(
-                {
-                    "error": "Contact file not found or you do not have permission to update it."
-                },
+                {"error": "Contact file not found or you do not have permission to update it."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
         contacts_data = request.data.get("contacts")
         if not contacts_data:
             return Response(
@@ -634,43 +638,106 @@ class ContactFileUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        updated_contacts = []  
-        row_count = 0 
+        updated_contacts = []
+        new_contacts = []
+        row_count = 0
         new_rows_count = 0
 
-        for row in contacts_data:
-            contact_id = row.get("id")  
-            if contact_id: 
-                try:
-                    contact = Contact.objects.get(
-                        id=contact_id, contact_file=contact_file
-                    )
-                    contact.data.update(
-                        row.get("data", {})
-                    )  
-                    contact.save()
+        existing_contact_ids = set(Contact.objects.filter(contact_file=contact_file).values_list("id", flat=True))
+
+        with transaction.atomic():
+            for row in contacts_data:
+                contact_id = row.get("id")
+                data = row.get("data", {})
+
+                if contact_id in existing_contact_ids:
+                    contact = Contact.objects.get(id=contact_id, contact_file=contact_file)
+                    contact.data.update(data)
                     updated_contacts.append(contact)
                     row_count += 1
-                except Contact.DoesNotExist:
-                    continue
-            else: 
-                new_row = row.get("data", {})
-                if new_row:
-                    contact = Contact(contact_file=contact_file, data=new_row)
-                    contact.save()
-                    updated_contacts.append(contact)
+                else:
+                    new_contacts.append(Contact(contact_file=contact_file, data=data))
                     new_rows_count += 1
+
+            if updated_contacts:
+                Contact.objects.bulk_update(updated_contacts, ["data"])
+            if new_contacts:
+                Contact.objects.bulk_create(new_contacts)
 
         return Response(
             {
                 "message": "Contacts updated and new rows added successfully.",
                 "file_name": contact_file.name,
                 "total_contacts_updated": row_count,
-                "total_new_rows": new_rows_count, 
+                "total_new_rows": new_rows_count,
                 "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
             },
             status=status.HTTP_200_OK,
         )
+
+# class ContactFileUpdateView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def put(self, request, file_id):
+#         """
+#         Update an existing contact file with a new CSV.
+#         This allows the user to edit and add new rows with new fields.
+#         """
+#         user = request.user
+
+#         try:
+#             contact_file = ContactFile.objects.get(id=file_id, user=user)
+#         except ContactFile.DoesNotExist:
+#             return Response(
+#                 {
+#                     "error": "Contact file not found or you do not have permission to update it."
+#                 },
+#                 status=status.HTTP_404_NOT_FOUND,
+#             )
+#         contacts_data = request.data.get("contacts")
+#         if not contacts_data:
+#             return Response(
+#                 {"error": "No contacts data provided."},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+
+#         updated_contacts = []  
+#         row_count = 0 
+#         new_rows_count = 0
+
+#         for row in contacts_data:
+#             contact_id = row.get("id")  
+#             if contact_id: 
+#                 try:
+#                     contact = Contact.objects.get(
+#                         id=contact_id, contact_file=contact_file
+#                     )
+#                     contact.data.update(
+#                         row.get("data", {})
+#                     )  
+#                     contact.save()
+#                     updated_contacts.append(contact)
+#                     row_count += 1
+#                 except Contact.DoesNotExist:
+#                     continue
+#             else: 
+#                 new_row = row.get("data", {})
+#                 if new_row:
+#                     contact = Contact(contact_file=contact_file, data=new_row)
+#                     contact.save()
+#                     updated_contacts.append(contact)
+#                     new_rows_count += 1
+
+#         return Response(
+#             {
+#                 "message": "Contacts updated and new rows added successfully.",
+#                 "file_name": contact_file.name,
+#                 "total_contacts_updated": row_count,
+#                 "total_new_rows": new_rows_count, 
+#                 "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+#             },
+#             status=status.HTTP_200_OK,
+#         )
 
 
 class DeleteContactListView(APIView):
