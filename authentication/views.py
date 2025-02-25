@@ -420,11 +420,11 @@ class LogoutDeviceView(APIView):
                     {"error": f"Failed to blacklist old token: {str(e)}"},
                     status=HTTP_400_BAD_REQUEST,
                 )
+            new_refresh_token = RefreshToken.for_user(user)
+            new_access_token = str(new_refresh_token.access_token)
                 
             device.delete()
 
-            new_refresh_token = RefreshToken.for_user(user)
-            new_access_token = str(new_refresh_token.access_token)
 
 
             return Response(
@@ -500,13 +500,12 @@ def logged_in_devices(user_profile):
     ]
     return devices_info
 
-import logging
-from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.tokens import RefreshToken
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -521,41 +520,35 @@ def logout_view(request):
             logger.warning(f"User {user.email} attempted logout without a device ID.")
             return Response({"message": "Device ID is required."}, status=400)
 
-        device = get_object_or_404(UserDevice, id=device_id)
+        # Prevent 404 exception by using filter().first()
+        device = UserDevice.objects.filter(id=device_id).first()
+        if not device:
+            logger.warning(f"User {user.email} attempted to logout, but device {device_id} was not found.")
+            return Response({"message": "Device not found."}, status=404)
 
         if device.user != user:
-            logger.warning(
-                f"User {user.email} tried to remove device {device_id} without permission."
-            )
-            return Response(
-                {"message": "You do not have permission to remove this device."},
-                status=403,
-            )
+            logger.warning(f"User {user.email} tried to remove device {device_id} without permission.")
+            return Response({"message": "You do not have permission to remove this device."}, status=403)
 
         refresh_token = device.token
-
         if not refresh_token:
             logger.warning(f"User {user.email} has no refresh token for device {device_id}.")
-            return Response(
-                {"message": "No refresh token found for this device."}, status=400
-            )
+            return Response({"message": "No refresh token found for this device."}, status=400)
 
+        # Blacklist token
         try:
             token = RefreshToken(refresh_token)
             token.blacklist()
             logger.info(f"User {user.email} successfully blacklisted token for device {device_id}.")
         except Exception as e:
             logger.error(f"Error blacklisting token for user {user.email}: {str(e)}")
-            return Response(
-                {"message": f"Error blacklisting token: {str(e)}"}, status=400
-            )
+            return Response({"message": f"Error blacklisting token: {str(e)}"}, status=400)
 
+        # Delete the device
         device.delete()
         logger.info(f"User {user.email} logged out and removed device {device_id}.")
 
-        return Response(
-            {"message": "Logout successful and device removed."}, status=200
-        )
+        return Response({"message": "Logout successful and device removed."}, status=200)
 
     except AuthenticationFailed:
         logger.error(f"User {request.user.email} provided an invalid token.")
@@ -563,6 +556,7 @@ def logout_view(request):
     except Exception as e:
         logger.exception(f"Unexpected error during logout for user {request.user.email}: {str(e)}")
         return Response({"message": f"Error: {str(e)}"}, status=500)
+
 
 
 
