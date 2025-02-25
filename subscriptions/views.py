@@ -35,7 +35,6 @@ def get_user_profile(request):
             "username": request.user.username,
             "email_count": user_profile.emails_sent,
             "plan_name": user_profile.plan_name,
-            "current_plan" : user_profile.current_plan,
             "plan_status": plan_status,
             "plan_start_date": user_profile.plan_start_date,
             "plan_expiry_date": user_profile.plan_expiration_date,
