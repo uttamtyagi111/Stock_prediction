@@ -32,6 +32,7 @@ from .models import (
     Contact,
     Unsubscribed,
     EmailStatusLog,
+    SubjectFile,
 )
 from django.shortcuts import get_object_or_404
 from .forms import SMTPServerForm
@@ -835,7 +836,7 @@ class CampaignListView(APIView):
                     {
                         "id": campaign.id,
                         "name": campaign.name,
-                        "subject": campaign.subject,
+                        "subject_list_id": campaign.subject_file_id,
                         "contact_list_id": campaign.contact_list_id,
                         "delay_seconds": campaign.delay_seconds,
                         "uploaded_file_name": campaign.uploaded_file_name, 
@@ -877,7 +878,7 @@ class CampaignView(APIView):
             .values(
                 "id",
                 "name",
-                "subject",
+                "subject_file_id",
                 "uploaded_file_name",
                 "display_name",
                 "delay_seconds",
@@ -921,11 +922,19 @@ class CampaignView(APIView):
             contact_file_id = serializer.validated_data["contact_list"]
             smtp_server_ids = serializer.validated_data["smtp_server_ids"]
             delay_seconds = serializer.validated_data.get("delay_seconds", 0)
-            subject = serializer.validated_data.get("subject")
             uploaded_file_name = serializer.validated_data["uploaded_file_name"]
             display_name = serializer.validated_data["display_name"]
+            subject_file_id = serializer.validated_data.get("subject_file")
 
             logger.debug(f"Received Data: {serializer.validated_data}")
+            subject_file = None
+            if subject_file_id:
+                try:
+                    subject_file = SubjectFile.objects.get(id=subject_file_id, user=request.user)
+                except SubjectFile.DoesNotExist:
+                    return Response({"error": "Subject file not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            
             try:
                 contact_file = ContactFile.objects.get(
                     id=contact_file_id, user=request.user
@@ -950,7 +959,7 @@ class CampaignView(APIView):
             campaign = Campaign.objects.create(
                 name=name,
                 user=request.user,
-                subject=subject,
+                subject_file=subject_file,
                 uploaded_file_name=uploaded_file_name,
                 display_name=display_name,
                 delay_seconds=delay_seconds,
@@ -1459,3 +1468,183 @@ class EmailStatusByDateRangeView(APIView):
         }
 
         return Response(analytics_data, status=status.HTTP_200_OK)
+
+
+
+# import csv
+# from io import StringIO
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status, permissions
+# from .models import SubjectFile
+
+# class SubjectFileUploadView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def post(self, request):
+#         user = request.user
+#         csv_file = request.FILES.get("csv_file")
+#         file_name = request.data.get("name")
+
+#         if not csv_file or not file_name:
+#             return Response(
+#                 {"error": "File name and CSV file are required."},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         if not csv_file.name.lower().endswith(".csv"):
+#             return Response(
+#                 {"error": "Only CSV files are allowed."},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         if SubjectFile.objects.filter(user=user, name=file_name).exists():
+#             return Response(
+#                 {"error": f'A file with the name "{file_name}" already exists. Please use a different name.'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         try:
+#             # Read and decode CSV file
+#             decoded_file = csv_file.read().decode("utf-8")
+#             reader = csv.DictReader(StringIO(decoded_file))
+
+#             csv_data = [row for row in reader if any(row.values())]  # Convert CSV rows to JSON
+
+#             if not csv_data:
+#                 return Response(
+#                     {"error": "The CSV file is empty or incorrectly formatted."},
+#                     status=status.HTTP_400_BAD_REQUEST
+#                 )
+
+#         except Exception as e:
+#             return Response(
+#                 {"error": f"Invalid CSV file format: {str(e)}"},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         # Save CSV data in JSON format inside the SubjectFile model
+#         subject_file = SubjectFile.objects.create(user=user, name=file_name, data=csv_data)
+
+#         return Response(
+#             {
+#                 "message": "Subject file uploaded successfully.",
+#                 "file_name": file_name,
+#                 "total_subjects": len(csv_data),
+#                 "uploaded_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+#             },
+#             status=status.HTTP_201_CREATED
+#         )
+import csv
+import json
+from io import StringIO
+from django.utils.timezone import now
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import SubjectFile
+
+class SubjectFileUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        file = request.FILES.get("csv_file")
+        file_name = request.data.get("name")
+
+        if not file:
+            return Response({"error": "CSV file is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not file_name:
+            return Response({"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Read CSV file
+        try:
+            decoded_file = file.read().decode("utf-8")
+            reader = csv.DictReader(StringIO(decoded_file))  # Read as dictionary
+
+            if not reader.fieldnames:
+                return Response({"error": "CSV file is missing headers."}, status=status.HTTP_400_BAD_REQUEST)
+
+            expected_header = "Subject"
+            csv_headers = [header.strip() for header in reader.fieldnames]  # Normalize headers (trim spaces)
+
+            if expected_header not in csv_headers:
+                return Response(
+                    {
+                        "error": f"Invalid CSV header. Expected header: '{expected_header}', but found: {csv_headers}"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Extract and store rows
+            rows = [{"id": index + 1, expected_header: row[expected_header]} for index, row in enumerate(reader) if row.get(expected_header)]
+
+            if not rows:
+                return Response({"error": "CSV file contains no valid data."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": f"Invalid CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save data in JSON format
+        subject_file = SubjectFile.objects.create(
+            user=user,
+            name=file_name,
+            uploaded_at=now(),
+            data={"data": rows}  # Storing rows as JSON
+        )
+
+        return Response(
+            {
+                "message": "Subject file uploaded successfully.",
+                "file_name": file_name,
+                "total_rows": len(rows),
+                "created_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import SubjectFile
+
+class SubjectFileList(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        user_files = SubjectFile.objects.filter(user=user).values('id', 'name', 'uploaded_at')
+
+        formatted_data = {
+            "subject_file_list": [
+                {
+                    "id": file["id"],
+                    "name": file["name"],
+                    "uploaded_at": file["uploaded_at"].strftime("%Y-%m-%d %H:%M:%S")
+                }
+                for file in user_files
+            ]
+        }
+
+        return Response(formatted_data)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .models import SubjectFile
+
+class DeleteSubjectFile(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, file_id):
+        user = request.user
+        try:
+            file = SubjectFile.objects.get(id=file_id, user=user)
+            file.delete()
+            return Response({"message": "File deleted successfully"}, status=status.HTTP_200_OK)
+        except SubjectFile.DoesNotExist:
+            return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)

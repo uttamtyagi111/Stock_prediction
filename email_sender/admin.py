@@ -100,20 +100,23 @@ class ContactAdmin(admin.ModelAdmin):
     make_unsubscribed.short_description = "Mark selected contacts as unsubscribed"
 
 
+from django.contrib import admin
+from .models import Campaign, SubjectFile  # Import SubjectFile
+
 @admin.register(Campaign)
 class CampaignAdmin(admin.ModelAdmin):
     list_display = (
         "name",
-        "user",
-        "subject",
+        "user", 
         "uploaded_file_name",
         "display_name",
         "delay_seconds",
         "created_at",
     )
     list_filter = ("created_at", "user")
-    search_fields = ("name", "subject", "user__email")
-    ordering = ("-created_at",)
+    search_fields = ("name", "subject_file__name", "user__email")  # Updated search_fields
+    ordering = ("-created_at",) # If ForeignKey
+
 
 
 @admin.register(Unsubscribed)
@@ -125,6 +128,19 @@ class UnsubscribedAdmin(admin.ModelAdmin):
     )  # Update fields here
     list_filter = ("contact_file_name", "unsubscribed_at")  # Update fields here
     search_fields = ("email", "contact_file_name")  # Allow searching by these fields
+
+
+
+from django.contrib import admin
+from .models import SubjectFile
+
+@admin.register(SubjectFile)
+class SubjectFileAdmin(admin.ModelAdmin):
+    list_display = ("name", "user", "uploaded_at")  # Display key fields in admin panel
+    list_filter = ("uploaded_at", "user")  # Filter by user and upload date
+    search_fields = ("name", "user__email")  # Enable search for file name & user email
+    ordering = ("-uploaded_at",)  # Order by latest uploaded file first
+
 
 
 # from django.contrib import admin

@@ -1,8 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import  SendEmailsView, UploadedFileDetails,UploadedFileList,UpdateUploadedFile,EmailStatusAnalyticsView,UserContactListView,DeleteContactListView
+from .views import  SendEmailsView, SubjectFileList, UploadedFileDetails,UploadedFileList,UpdateUploadedFile,EmailStatusAnalyticsView,UserContactListView,DeleteContactListView
 from . import views
-from .views import CampaignListView,UploadedFileDetails,UploadedFileDelete
+from .views import CampaignListView,UploadedFileDetails,UploadedFileDelete,SubjectFileUploadView,SubjectFileList,DeleteSubjectFile
 from .views import UploadHTMLToS3,EmailStatusByDateRangeView,ContactUploadView,CampaignView,ContactListView,ContactFileUpdateView,ContactUnsubscribeView
 
 router = DefaultRouter()
@@ -22,6 +22,9 @@ urlpatterns = [
     path('uploaded-files/<int:file_id>/delete/', UploadedFileDelete.as_view(), name='uploaded-file-delete'),
     path('email-status-analytics/',EmailStatusAnalyticsView.as_view(), name='email-status-analytics'),
     path('date-range/', EmailStatusByDateRangeView.as_view(), name='date-range'),
+    path("upload-subject-file/", SubjectFileUploadView.as_view(), name="upload-subject-file"),
+    path("subject-file-list/", SubjectFileList.as_view(), name="subject-file-list"),
+    path("delete-file/<int:file_id>/", DeleteSubjectFile.as_view(), name="delete-subject-file"),
     path('upload-contacts/', ContactUploadView.as_view(), name='upload-contacts'),
     path('user-contacts/', UserContactListView.as_view(), name='user-contacts'),
     path('contact-list/', ContactListView.as_view(), name='contact-list'),

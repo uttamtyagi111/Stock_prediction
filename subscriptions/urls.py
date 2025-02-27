@@ -10,6 +10,7 @@ urlpatterns = [
     path("available-plans/", views.get_available_plans, name="get_available_plans"),
     path("choose-plan/", views.choose_plan_view, name="choose_plan_view"),
     path("upgrade-plan/", views.upgrade_plan, name="upgrade_plan"),
+    path("verify-upgrade-payment/", views.verify_upgrade_payment, name="verify_upgrade_payment"),
     # path('create-order/', views.create_order, name='create_order'),
     # path('payment-callback/', views.handle_payment_callback, name='handle_payment_callback'),
     path("initiate-payment/", views.initiate_payment, name="initiate_payment"),

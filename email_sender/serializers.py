@@ -48,7 +48,7 @@ class CampaignSerializer(serializers.Serializer):
         child=serializers.IntegerField(), write_only=True
     )
     display_name = serializers.CharField()
-    subject = serializers.CharField(max_length=255)
+    subject = serializers.IntegerField()
     delay_seconds = serializers.IntegerField(required=False, default=0)
     uploaded_file_name = serializers.CharField()
     contact_list = serializers.IntegerField()
