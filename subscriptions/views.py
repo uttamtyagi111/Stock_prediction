@@ -378,9 +378,9 @@ def initiate_payment(request):
             "message": "Payment Initiated",
             "name": name,
             "amount": amount,
-            "redirectUrl": f"http://localhost:8000/verify-payment/?id={merchant_transaction_id}",
+            "redirectUrl": f"https://django-api-aqlo.onrender.com/verify-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
-            "callbackUrl": f"http://localhost:8000/payment-success?id={merchant_transaction_id}",
+            "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
             "paymentInstrument": {"type": "PAY_PAGE"},
         }
@@ -552,9 +552,9 @@ def upgrade_plan(request):
             "message": "Upgrade Plan Payment Initiated",
             "name": request.user.username,
             "amount": amount,
-            "redirectUrl": f"http://localhost:8000/verify-payment/?id={merchant_transaction_id}",
+            "redirectUrl": f"https://django-api-aqlo.onrender.com/verify-upgrade-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
-            "callbackUrl": f"http://localhost:8000/payment-success?id={merchant_transaction_id}",
+            "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
             "paymentInstrument": {"type": "PAY_PAGE"},
         }
