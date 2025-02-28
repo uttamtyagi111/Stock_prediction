@@ -3,6 +3,8 @@ from rest_framework import serializers
 from datetime import timedelta
 from django.utils import timezone
 from asgiref.sync import async_to_sync
+from django.utils.timezone import now
+from .models import SubjectFile
 from channels.layers import get_channel_layer
 from email_validator import validate_email, EmailNotValidError
 import dns.resolver
@@ -1558,15 +1560,7 @@ class EmailStatusByDateRangeView(APIView):
 #             },
 #             status=status.HTTP_201_CREATED
 #         )
-import csv
-import json
-from io import StringIO
-from django.utils.timezone import now
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .models import SubjectFile
+
 
 
 class SubjectFileUploadView(APIView):
@@ -1708,16 +1702,12 @@ class SubjectFileDetail(APIView):
             return Response(
                 {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
             ) 
-
-
 class SubjectFileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, file_id):
         """
-        Update or insert rows in the SubjectFile data.
-        - If `id` is given, update the existing row.
-        - If `id` is not given, add a new row with a sequential unique ID.
+        Update an existing subject file with new rows or modify existing ones.
         """
         user = request.user
 
@@ -1725,71 +1715,132 @@ class SubjectFileUpdateView(APIView):
             subject_file = SubjectFile.objects.get(id=file_id, user=user)
         except SubjectFile.DoesNotExist:
             return Response(
-                {
-                    "error": "Subject file not found or you do not have permission to update it."
-                },
+                {"error": "Subject file not found or you do not have permission to update it."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        subject_data = request.data.get("rows")  # Expecting a list of dicts
-
-        if not isinstance(subject_data, list):
+        rows_data = request.data.get("rows")
+        if not rows_data:
             return Response(
-                {"error": "Invalid data format. Expected a list of dictionaries."},
+                {"error": "No rows data provided."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        updated_rows = []
-        new_rows = []
-        total_updated = 0
-        total_new = 0
+        # Ensure subject_file.data is a list
+        if not isinstance(subject_file.data, list):
+            subject_file.data = []
 
-        # Extract existing rows into a dictionary {id: row_data}
-        existing_data = {
-            row["id"]: row
-            for row in subject_file.data
-            if isinstance(row, dict) and "id" in row
-        }
+        existing_rows = {row["id"]: row for row in subject_file.data if "id" in row}
+        next_id = max([row["id"] for row in subject_file.data if "id" in row], default=0) + 1
+        updated_data = []
 
-        # Determine the next row ID based on the total count of existing rows
-        next_id = max(existing_data.keys(), default=0) + 1
+        for row in rows_data:
+            row_id = row.get("id")
+            if row_id in existing_rows:
+                existing_rows[row_id].update(row)  # Update the existing row
+            else:
+                row["id"] = next_id
+                next_id += 1
+                updated_data.append(row)  # Add new row
 
-        with transaction.atomic():
-            for row in subject_data:
-                if not isinstance(row, dict):  # Ensure valid data format
-                    continue
-
-                row_id = row.get("id")
-                row_subject = row.get("Subject")  # Extract "Subject" field
-
-                if row_id and row_id in existing_data:
-                    # Update existing row
-                    existing_data[row_id]["Subject"] = row_subject
-                    updated_rows.append(existing_data[row_id])
-                    total_updated += 1
-                else:
-                    # Insert new row with a sequential ID
-                    new_row = {"id": next_id, "Subject": row_subject}
-                    subject_file.data.append(new_row)
-                    new_rows.append(new_row)
-                    total_new += 1
-                    next_id += 1  # Increment for the next new row
-
-            # Save changes to the database
-            subject_file.save()
+        # Save updated data
+        subject_file.data = list(existing_rows.values()) + updated_data
+        subject_file.save()
 
         return Response(
             {
-                "message": "Rows updated and new rows added successfully.",
+                "message": "Subject file updated successfully.",
                 "file_id": subject_file.id,
                 "file_name": subject_file.name,
-                "total_rows_updated": total_updated,
-                "total_new_rows": total_new,
-                "created_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "rows": subject_file.data,  # Returning updated row data
+                "updated_rows": len(rows_data),
+                "total_rows": len(subject_file.data),
+                "uploaded_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "rows": subject_file.data, 
             },
             status=status.HTTP_200_OK,
         )
+
+
+# class SubjectFileUpdateView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def put(self, request, file_id):
+#         """
+#         Update or insert rows in the SubjectFile data.
+#         - If `id` is given, update the existing row.
+#         - If `id` is not given, add a new row with a sequential unique ID.
+#         """
+#         user = request.user
+
+#         try:
+#             subject_file = SubjectFile.objects.get(id=file_id, user=user)
+#         except SubjectFile.DoesNotExist:
+#             return Response(
+#                 {
+#                     "error": "Subject file not found or you do not have permission to update it."
+#                 },
+#                 status=status.HTTP_404_NOT_FOUND,
+#             )
+
+#         subject_data = request.data.get("rows")  # Expecting a list of dicts
+
+#         if not isinstance(subject_data, list):
+#             return Response(
+#                 {"error": "Invalid data format. Expected a list of dictionaries."},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+
+#         updated_rows = []
+#         new_rows = []
+#         total_updated = 0
+#         total_new = 0
+
+#         # Extract existing rows into a dictionary {id: row_data}
+#         existing_data = {
+#             row["id"]: row
+#             for row in subject_file.data
+#             if isinstance(row, dict) and "id" in row
+#         }
+
+#         # Determine the next row ID based on the total count of existing rows
+#         next_id = max(existing_data.keys(), default=0) + 1
+
+#         with transaction.atomic():
+#             for row in subject_data:
+#                 if not isinstance(row, dict):  # Ensure valid data format
+#                     continue
+
+#                 row_id = row.get("id")
+#                 row_subject = row.get("Subject")  # Extract "Subject" field
+
+#                 if row_id and row_id in existing_data:
+#                     # Update existing row
+#                     existing_data[row_id]["Subject"] = row_subject
+#                     updated_rows.append(existing_data[row_id])
+#                     total_updated += 1
+#                 else:
+#                     # Insert new row with a sequential ID
+#                     new_row = {"id": next_id, "Subject": row_subject}
+#                     subject_file.data.append(new_row)
+#                     new_rows.append(new_row)
+#                     total_new += 1
+#                     next_id += 1  # Increment for the next new row
+
+#             # Save changes to the database
+#             subject_file.save()
+
+#         return Response(
+#             {
+#                 "message": "Rows updated and new rows added successfully.",
+#                 "file_id": subject_file.id,
+#                 "file_name": subject_file.name,
+#                 "total_rows_updated": total_updated,
+#                 "total_new_rows": total_new,
+#                 "created_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+#                 "rows": subject_file.data,  # Returning updated row data
+#             },
+#             status=status.HTTP_200_OK,
+#         )
 
 
 class SubjectFileRowDeleteView(APIView):

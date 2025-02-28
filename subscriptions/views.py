@@ -3,7 +3,7 @@ import base64
 import hashlib
 import json
 import requests
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -419,10 +419,6 @@ def initiate_payment(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-import hashlib
-import requests
-from django.http import JsonResponse, HttpResponseBadRequest
-
 from rest_framework.permissions import AllowAny
 
 
@@ -594,8 +590,6 @@ def upgrade_plan(request):
         return JsonResponse({"error": str(e)}, status=500)
     
 import logging
-
-# Configure logging
 logger = logging.getLogger(__name__)
 
 @api_view(["GET"])
