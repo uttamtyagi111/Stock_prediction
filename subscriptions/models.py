@@ -28,12 +28,6 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE,related_name="profile")
     plan_name = models.CharField(
         max_length=20,
-        choices=[
-            ("Basic", "Basic"),
-            ("Standard", "Standard"),
-            ("Premium", "Premium"),
-            ("Elite", "Elite"),
-        ],
         null=True,
         blank=True,
     )

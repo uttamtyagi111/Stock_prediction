@@ -281,18 +281,16 @@ class UpdateUploadedFile(APIView):
             )
 
         uploaded_file.name = new_user_given_name
-        uploaded_file.key = new_s3_key 
-        uploaded_file.file_url = (
-            f"{settings.AWS_S3_FILE_URL}{new_s3_key}" 
-        )
+        uploaded_file.key = new_s3_key
+        uploaded_file.file_url = f"{settings.AWS_S3_FILE_URL}{new_s3_key}"
         uploaded_file.save()
 
         return Response(
             {
                 "message": "File updated successfully.",
-                "file_name": uploaded_file.name, 
-                "file_key": uploaded_file.key,  
-                "file_url": uploaded_file.file_url, 
+                "file_name": uploaded_file.name,
+                "file_key": uploaded_file.key,
+                "file_url": uploaded_file.file_url,
             },
             status=status.HTTP_200_OK,
         )
@@ -453,18 +451,19 @@ class FileUploadView(APIView):
 #         contact_file = ContactFile.objects.create(user=user, name=file_name)
 
 #         contacts = []
-#         row_count = 0  
+#         row_count = 0
 #         for row in reader:
-#             if any(row.values()): 
+#             if any(row.values()):
 #                 contacts.append(Contact(contact_file=contact_file, data=row))
-#                 row_count += 1  
+#                 row_count += 1
 #         Contact.objects.bulk_create(contacts)
+
 
 #         return Response(
 #             {
 #                 "message": "Contacts uploaded and saved successfully.",
 #                 "file_name": file_name,
-#                 "total_contacts": row_count, 
+#                 "total_contacts": row_count,
 #                 "created_at": contact_file.uploaded_at.strftime(
 #                     "%Y-%m-%d %H:%M:%S"
 #                 ),
@@ -491,18 +490,24 @@ class ContactUploadView(APIView):
         file_name = request.data.get("name")
 
         if not csv_file:
-            logger.error(f"User {user.email} tried to upload without providing a CSV file.")
+            logger.error(
+                f"User {user.email} tried to upload without providing a CSV file."
+            )
             return Response(
                 {"error": "CSV file is required."}, status=status.HTTP_400_BAD_REQUEST
             )
         if not file_name:
-            logger.error(f"User {user.email} tried to upload without providing a file name.")
+            logger.error(
+                f"User {user.email} tried to upload without providing a file name."
+            )
             return Response(
                 {"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if ContactFile.objects.filter(user=user, name=file_name).exists():
-            logger.warning(f'User {user.email} tried to upload a duplicate file name: "{file_name}".')
+            logger.warning(
+                f'User {user.email} tried to upload a duplicate file name: "{file_name}".'
+            )
             return Response(
                 {
                     "error": f'A file with the name "{file_name}" already exists. Please use a different name.'
@@ -528,33 +533,34 @@ class ContactUploadView(APIView):
         logger.info(f'User {user.email} successfully uploaded file "{file_name}".')
 
         contacts = []
-        row_count = 0  
+        row_count = 0
         for row in reader:
-            if any(row.values()): 
+            if any(row.values()):
                 contacts.append(Contact(contact_file=contact_file, data=row))
-                row_count += 1  
+                row_count += 1
 
         Contact.objects.bulk_create(contacts)
-        logger.info(f'User {user.email} - {row_count} contacts saved from "{file_name}".')
+        logger.info(
+            f'User {user.email} - {row_count} contacts saved from "{file_name}".'
+        )
 
         return Response(
             {
                 "message": "Contacts uploaded and saved successfully.",
                 "file_name": file_name,
-                "total_contacts": row_count, 
+                "total_contacts": row_count,
                 "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
             },
             status=status.HTTP_201_CREATED,
         )
+
 
 class ContactListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        file_id = request.query_params.get(
-            "file_id"
-        ) 
+        file_id = request.query_params.get("file_id")
 
         if not file_id:
             return Response(
@@ -572,7 +578,9 @@ class ContactListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        contacts = Contact.objects.filter(contact_file=contact_file).values("id","data")
+        contacts = Contact.objects.filter(contact_file=contact_file).values(
+            "id", "data"
+        )
         return Response(
             {"file_name": contact_file.name, "contacts": list(contacts)},
             status=status.HTTP_200_OK,
@@ -583,7 +591,7 @@ class UserContactListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user  
+        user = request.user
         contact_files = ContactFile.objects.filter(user=user)
 
         if not contact_files.exists():
@@ -602,17 +610,19 @@ class UserContactListView(APIView):
                     "contacts": list(contacts),
                     "created_at": contact_file.uploaded_at.strftime(
                         "%Y-%m-%d %H:%M:%S"
-                    ), 
+                    ),
                 }
             )
 
         return Response({"user_contact_files": contact_list}, status=status.HTTP_200_OK)
+
 
 from django.db import transaction
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+
 
 class ContactFileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -628,7 +638,9 @@ class ContactFileUpdateView(APIView):
             contact_file = ContactFile.objects.get(id=file_id, user=user)
         except ContactFile.DoesNotExist:
             return Response(
-                {"error": "Contact file not found or you do not have permission to update it."},
+                {
+                    "error": "Contact file not found or you do not have permission to update it."
+                },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -644,7 +656,11 @@ class ContactFileUpdateView(APIView):
         row_count = 0
         new_rows_count = 0
 
-        existing_contact_ids = set(Contact.objects.filter(contact_file=contact_file).values_list("id", flat=True))
+        existing_contact_ids = set(
+            Contact.objects.filter(contact_file=contact_file).values_list(
+                "id", flat=True
+            )
+        )
 
         with transaction.atomic():
             for row in contacts_data:
@@ -652,7 +668,9 @@ class ContactFileUpdateView(APIView):
                 data = row.get("data", {})
 
                 if contact_id in existing_contact_ids:
-                    contact = Contact.objects.get(id=contact_id, contact_file=contact_file)
+                    contact = Contact.objects.get(
+                        id=contact_id, contact_file=contact_file
+                    )
                     contact.data.update(data)
                     updated_contacts.append(contact)
                     row_count += 1
@@ -675,6 +693,7 @@ class ContactFileUpdateView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
 
 # class ContactFileUpdateView(APIView):
 #     permission_classes = [IsAuthenticated]
@@ -702,26 +721,26 @@ class ContactFileUpdateView(APIView):
 #                 status=status.HTTP_400_BAD_REQUEST,
 #             )
 
-#         updated_contacts = []  
-#         row_count = 0 
+#         updated_contacts = []
+#         row_count = 0
 #         new_rows_count = 0
 
 #         for row in contacts_data:
-#             contact_id = row.get("id")  
-#             if contact_id: 
+#             contact_id = row.get("id")
+#             if contact_id:
 #                 try:
 #                     contact = Contact.objects.get(
 #                         id=contact_id, contact_file=contact_file
 #                     )
 #                     contact.data.update(
 #                         row.get("data", {})
-#                     )  
+#                     )
 #                     contact.save()
 #                     updated_contacts.append(contact)
 #                     row_count += 1
 #                 except Contact.DoesNotExist:
 #                     continue
-#             else: 
+#             else:
 #                 new_row = row.get("data", {})
 #                 if new_row:
 #                     contact = Contact(contact_file=contact_file, data=new_row)
@@ -734,7 +753,7 @@ class ContactFileUpdateView(APIView):
 #                 "message": "Contacts updated and new rows added successfully.",
 #                 "file_name": contact_file.name,
 #                 "total_contacts_updated": row_count,
-#                 "total_new_rows": new_rows_count, 
+#                 "total_new_rows": new_rows_count,
 #                 "created_at": contact_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
 #             },
 #             status=status.HTTP_200_OK,
@@ -783,10 +802,9 @@ class ContactUnsubscribeView(APIView):
             )
             contact_file = ContactFile.objects.get(id=contact_file_id)
 
-
             unsubscribed_entry = Unsubscribed.objects.create(
-                email=contact.data.get("Email"), 
-                contact_file_name=contact_file.name, 
+                email=contact.data.get("Email"),
+                contact_file_name=contact_file.name,
             )
             contact.delete()
             if unsubscribed_entry:
@@ -839,7 +857,7 @@ class CampaignListView(APIView):
                         "subject_list_id": campaign.subject_file_id,
                         "contact_list_id": campaign.contact_list_id,
                         "delay_seconds": campaign.delay_seconds,
-                        "uploaded_file_name": campaign.uploaded_file_name, 
+                        "uploaded_file_name": campaign.uploaded_file_name,
                         "display_name": campaign.display_name,
                         "smtp_server_ids": list(
                             campaign.smtp_servers.values_list("id", flat=True)
@@ -897,14 +915,13 @@ class CampaignView(APIView):
             uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
             file_url = uploaded_file.file_url if uploaded_file else None
 
-
         smtp_server_ids = list(
             Campaign.objects.get(id=campaign_id).smtp_servers.values_list(
                 "id", flat=True
             )
         )
         campaign["smtp_server_ids"] = smtp_server_ids
-        campaign["file_url"] = file_url 
+        campaign["file_url"] = file_url
         return Response(campaign, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
@@ -930,11 +947,15 @@ class CampaignView(APIView):
             subject_file = None
             if subject_file_id:
                 try:
-                    subject_file = SubjectFile.objects.get(id=subject_file_id, user=request.user)
+                    subject_file = SubjectFile.objects.get(
+                        id=subject_file_id, user=request.user
+                    )
                 except SubjectFile.DoesNotExist:
-                    return Response({"error": "Subject file not found."}, status=status.HTTP_404_NOT_FOUND)
+                    return Response(
+                        {"error": "Subject file not found."},
+                        status=status.HTTP_404_NOT_FOUND,
+                    )
 
-            
             try:
                 contact_file = ContactFile.objects.get(
                     id=contact_file_id, user=request.user
@@ -1043,16 +1064,19 @@ class CampaignView(APIView):
 
 class SendEmailsView(APIView):
     DEFAULT_EMAIL_LIMIT = 20
-    def get_html_content_from_s3(self,uploaded_file_name):
+
+    def get_html_content_from_s3(self, uploaded_file_name):
         """Fetches HTML content from S3 using the file name by retrieving the key from the database."""
         try:
             # Pehle database se uploaded file ka key dhundo
             uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
 
             if not uploaded_file:
-                logger.error(f"No file found in database with name: {uploaded_file_name}")
+                logger.error(
+                    f"No file found in database with name: {uploaded_file_name}"
+                )
                 return None
-            
+
             key = uploaded_file.key  # Ye column check kar lo tumhare model me
 
             # AWS S3 Client
@@ -1470,7 +1494,6 @@ class EmailStatusByDateRangeView(APIView):
         return Response(analytics_data, status=status.HTTP_200_OK)
 
 
-
 # import csv
 # from io import StringIO
 # from rest_framework.views import APIView
@@ -1545,6 +1568,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import SubjectFile
 
+
 class SubjectFileUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1554,9 +1578,13 @@ class SubjectFileUploadView(APIView):
         file_name = request.data.get("name")
 
         if not file:
-            return Response({"error": "CSV file is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "CSV file is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
         if not file_name:
-            return Response({"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "File name is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Read CSV file
         try:
@@ -1564,10 +1592,15 @@ class SubjectFileUploadView(APIView):
             reader = csv.DictReader(StringIO(decoded_file))  # Read as dictionary
 
             if not reader.fieldnames:
-                return Response({"error": "CSV file is missing headers."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "CSV file is missing headers."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             expected_header = "Subject"
-            csv_headers = [header.strip() for header in reader.fieldnames]  # Normalize headers (trim spaces)
+            csv_headers = [
+                header.strip() for header in reader.fieldnames
+            ]  # Normalize headers (trim spaces)
 
             if expected_header not in csv_headers:
                 return Response(
@@ -1578,20 +1611,30 @@ class SubjectFileUploadView(APIView):
                 )
 
             # Extract and store rows
-            rows = [{"id": index + 1, expected_header: row[expected_header]} for index, row in enumerate(reader) if row.get(expected_header)]
+            rows = [
+                {"id": index + 1, expected_header: row[expected_header]}
+                for index, row in enumerate(reader)
+                if row.get(expected_header)
+            ]
 
             if not rows:
-                return Response({"error": "CSV file contains no valid data."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "CSV file contains no valid data."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         except Exception as e:
-            return Response({"error": f"Invalid CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Invalid CSV file: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Save data in JSON format
         subject_file = SubjectFile.objects.create(
             user=user,
             name=file_name,
             uploaded_at=now(),
-            data={"data": rows}  # Storing rows as JSON
+            data={"data": rows},  # Storing rows as JSON
         )
 
         return Response(
@@ -1605,24 +1648,22 @@ class SubjectFileUploadView(APIView):
         )
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from .models import SubjectFile
 
 class SubjectFileList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        user_files = SubjectFile.objects.filter(user=user).values('id', 'name', 'uploaded_at')
+        user_files = SubjectFile.objects.filter(user=user).values(
+            "id", "name", "uploaded_at"
+        )
 
         formatted_data = {
             "subject_file_list": [
                 {
                     "id": file["id"],
                     "name": file["name"],
-                    "uploaded_at": file["uploaded_at"].strftime("%Y-%m-%d %H:%M:%S")
+                    "uploaded_at": file["uploaded_at"].strftime("%Y-%m-%d %H:%M:%S"),
                 }
                 for file in user_files
             ]
@@ -1630,12 +1671,6 @@ class SubjectFileList(APIView):
 
         return Response(formatted_data)
 
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .models import SubjectFile
 
 class DeleteSubjectFile(APIView):
     permission_classes = [IsAuthenticated]
@@ -1645,6 +1680,167 @@ class DeleteSubjectFile(APIView):
         try:
             file = SubjectFile.objects.get(id=file_id, user=user)
             file.delete()
-            return Response({"message": "File deleted successfully"}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "File deleted successfully"}, status=status.HTTP_200_OK
+            )
         except SubjectFile.DoesNotExist:
-            return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class SubjectFileDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, file_id):
+        user = request.user
+        try:
+            file = SubjectFile.objects.get(id=file_id, user=user)
+
+            response_data = {
+                "id": file.id,
+                "name": file.name,
+                "uploaded_at": file.uploaded_at,
+                "data": file.data,
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+        except SubjectFile.DoesNotExist:
+            return Response(
+                {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            ) 
+
+
+class SubjectFileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, file_id):
+        """
+        Update or insert rows in the SubjectFile data.
+        - If `id` is given, update the existing row.
+        - If `id` is not given, add a new row with a sequential unique ID.
+        """
+        user = request.user
+
+        try:
+            subject_file = SubjectFile.objects.get(id=file_id, user=user)
+        except SubjectFile.DoesNotExist:
+            return Response(
+                {
+                    "error": "Subject file not found or you do not have permission to update it."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        subject_data = request.data.get("rows")  # Expecting a list of dicts
+
+        if not isinstance(subject_data, list):
+            return Response(
+                {"error": "Invalid data format. Expected a list of dictionaries."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        updated_rows = []
+        new_rows = []
+        total_updated = 0
+        total_new = 0
+
+        # Extract existing rows into a dictionary {id: row_data}
+        existing_data = {
+            row["id"]: row
+            for row in subject_file.data
+            if isinstance(row, dict) and "id" in row
+        }
+
+        # Determine the next row ID based on the total count of existing rows
+        next_id = max(existing_data.keys(), default=0) + 1
+
+        with transaction.atomic():
+            for row in subject_data:
+                if not isinstance(row, dict):  # Ensure valid data format
+                    continue
+
+                row_id = row.get("id")
+                row_subject = row.get("Subject")  # Extract "Subject" field
+
+                if row_id and row_id in existing_data:
+                    # Update existing row
+                    existing_data[row_id]["Subject"] = row_subject
+                    updated_rows.append(existing_data[row_id])
+                    total_updated += 1
+                else:
+                    # Insert new row with a sequential ID
+                    new_row = {"id": next_id, "Subject": row_subject}
+                    subject_file.data.append(new_row)
+                    new_rows.append(new_row)
+                    total_new += 1
+                    next_id += 1  # Increment for the next new row
+
+            # Save changes to the database
+            subject_file.save()
+
+        return Response(
+            {
+                "message": "Rows updated and new rows added successfully.",
+                "file_id": subject_file.id,
+                "file_name": subject_file.name,
+                "total_rows_updated": total_updated,
+                "total_new_rows": total_new,
+                "created_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "rows": subject_file.data,  # Returning updated row data
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class SubjectFileRowDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, file_id, row_id):
+        """
+        Delete a specific row from the SubjectFile by row ID.
+        """
+        user = request.user
+
+        try:
+            subject_file = SubjectFile.objects.get(id=file_id, user=user)
+        except SubjectFile.DoesNotExist:
+            return Response(
+                {
+                    "error": "Subject file not found or you do not have permission to delete it."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        existing_rows = subject_file.data  # Get the existing data
+        row_to_delete = None
+
+        # Filter out the row with the given row_id
+        updated_rows = []
+        with transaction.atomic():
+            for row in existing_rows:
+                if isinstance(row, dict) and row.get("id") == row_id:
+                    row_to_delete = row
+                else:
+                    updated_rows.append(row)
+
+            if not row_to_delete:
+                return Response(
+                    {"error": f"Row with ID {row_id} not found in this file."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Save the updated rows back to the SubjectFile
+            subject_file.data = updated_rows
+            subject_file.save()
+
+        return Response(
+            {
+                "message": f"Row with ID {row_id} deleted successfully.",
+                "file_id": subject_file.id,
+                "file_name": subject_file.name,
+                "total_remaining_rows": len(updated_rows),
+                "created_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "rows": updated_rows,  # Returning updated row data
+            },
+            status=status.HTTP_200_OK,
+        )

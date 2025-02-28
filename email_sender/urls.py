@@ -2,8 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import  SendEmailsView, SubjectFileList, UploadedFileDetails,UploadedFileList,UpdateUploadedFile,EmailStatusAnalyticsView,UserContactListView,DeleteContactListView
 from . import views
-from .views import CampaignListView,UploadedFileDetails,UploadedFileDelete,SubjectFileUploadView,SubjectFileList,DeleteSubjectFile
-from .views import UploadHTMLToS3,EmailStatusByDateRangeView,ContactUploadView,CampaignView,ContactListView,ContactFileUpdateView,ContactUnsubscribeView
+from .views import CampaignListView,UploadedFileDetails,UploadedFileDelete,SubjectFileUploadView,SubjectFileList,DeleteSubjectFile,SubjectFileDetail,SubjectFileUpdateView
+from .views import UploadHTMLToS3,EmailStatusByDateRangeView,ContactUploadView,CampaignView,ContactListView,ContactFileUpdateView,ContactUnsubscribeView,SubjectFileRowDeleteView
 
 router = DefaultRouter()
 
@@ -24,6 +24,9 @@ urlpatterns = [
     path('date-range/', EmailStatusByDateRangeView.as_view(), name='date-range'),
     path("upload-subject-file/", SubjectFileUploadView.as_view(), name="upload-subject-file"),
     path("subject-file-list/", SubjectFileList.as_view(), name="subject-file-list"),
+    path("subject-file/<int:file_id>/", SubjectFileDetail.as_view(), name="subject-file-detail"),
+    path("subject-file/<int:file_id>/rows/", SubjectFileUpdateView.as_view(), name="update-insert-multiple-rows"),
+    path('subject-file/<int:file_id>/row/<int:row_id>/', SubjectFileRowDeleteView.as_view(), name='delete-subject-file-row'),
     path("delete-file/<int:file_id>/", DeleteSubjectFile.as_view(), name="delete-subject-file"),
     path('upload-contacts/', ContactUploadView.as_view(), name='upload-contacts'),
     path('user-contacts/', UserContactListView.as_view(), name='user-contacts'),
@@ -34,4 +37,4 @@ urlpatterns = [
     path('campaign/', CampaignView.as_view(), name='create_campaign'),
     path('campaigns/<int:id>/', CampaignView.as_view(), name='campaign-detail'),
     path('campaigns-list/', CampaignListView.as_view(), name='all-campaigns'),
- ]
+]
