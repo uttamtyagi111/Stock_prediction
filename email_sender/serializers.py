@@ -48,10 +48,10 @@ class CampaignSerializer(serializers.Serializer):
         child=serializers.IntegerField(), write_only=True
     )
     display_name = serializers.CharField()
-    subject = serializers.IntegerField()
     delay_seconds = serializers.IntegerField(required=False, default=0)
-    uploaded_file_name = serializers.CharField()
+    uploaded_file = serializers.IntegerField()
     contact_list = serializers.IntegerField()
+    subject_file = serializers.IntegerField()
 
     class Meta:
         model = Campaign
@@ -64,9 +64,16 @@ class CampaignSerializer(serializers.Serializer):
             )
         return value
     
+    def validate_uploaded_file(self, value):
+        if not UploadedFile.objects.filter(id=value).exists():
+            raise serializers.ValidationError(
+                "The provided uploaded file ID does not exist."
+            )
+        return value
     
-    def get_file_url(uploaded_file_name):
-        uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
+    
+    def get_file_url(uploaded_file):
+        uploaded_file = UploadedFile.objects.filter(name=uploaded_file).first()
         return uploaded_file.file_url if uploaded_file else None
 
 

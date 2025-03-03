@@ -856,10 +856,10 @@ class CampaignListView(APIView):
                     {
                         "id": campaign.id,
                         "name": campaign.name,
-                        "subject_list_id": campaign.subject_file_id,
+                        "subject_file_id": campaign.subject_file_id,
                         "contact_list_id": campaign.contact_list_id,
                         "delay_seconds": campaign.delay_seconds,
-                        "uploaded_file_name": campaign.uploaded_file_name,
+                        "uploaded_file_id": campaign.uploaded_file_id,
                         "display_name": campaign.display_name,
                         "smtp_server_ids": list(
                             campaign.smtp_servers.values_list("id", flat=True)
@@ -899,7 +899,7 @@ class CampaignView(APIView):
                 "id",
                 "name",
                 "subject_file_id",
-                "uploaded_file_name",
+                "uploaded_file_id",
                 "display_name",
                 "delay_seconds",
                 "contact_list_id",
@@ -911,10 +911,10 @@ class CampaignView(APIView):
             return Response(
                 {"error": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        uploaded_file_name = campaign.get("uploaded_file_name")
+        uploaded_file_id = campaign.get("uploaded_file_id")
         file_url = None
-        if uploaded_file_name:
-            uploaded_file = UploadedFile.objects.filter(name=uploaded_file_name).first()
+        if uploaded_file_id:
+            uploaded_file = UploadedFile.objects.filter(id=uploaded_file_id).first()
             file_url = uploaded_file.file_url if uploaded_file else None
 
         smtp_server_ids = list(
@@ -941,7 +941,7 @@ class CampaignView(APIView):
             contact_file_id = serializer.validated_data["contact_list"]
             smtp_server_ids = serializer.validated_data["smtp_server_ids"]
             delay_seconds = serializer.validated_data.get("delay_seconds", 0)
-            uploaded_file_name = serializer.validated_data["uploaded_file_name"]
+            uploaded_file_id = serializer.validated_data["uploaded_file"]
             display_name = serializer.validated_data["display_name"]
             subject_file_id = serializer.validated_data.get("subject_file")
 
@@ -967,6 +967,16 @@ class CampaignView(APIView):
                     {"error": "Contact file not found."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
+                
+            try:
+                uploaded_file = UploadedFile.objects.get(
+                    id=uploaded_file_id, user=request.user
+                )
+            except UploadedFile.DoesNotExist:
+                return Response(
+                    {"error": "Template file not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
             smtp_servers = SMTPServer.objects.filter(
                 id__in=smtp_server_ids, user=request.user
@@ -983,7 +993,7 @@ class CampaignView(APIView):
                 name=name,
                 user=request.user,
                 subject_file=subject_file,
-                uploaded_file_name=uploaded_file_name,
+                uploaded_file=uploaded_file,
                 display_name=display_name,
                 delay_seconds=delay_seconds,
                 contact_list=contact_file,
@@ -1200,13 +1210,13 @@ class SendEmailsView(APIView):
             )
 
         smtp_server_ids = campaign.smtp_servers.values_list("id", flat=True)
-        uploaded_file_name = campaign.uploaded_file_name
+        uploaded_file = campaign.uploaded_file
         display_name = campaign.display_name
         delay_seconds = campaign.delay_seconds
-        subject = campaign.subject
+        subject = campaign.subject_file
 
         try:
-            file_content = self.get_html_content_from_s3(uploaded_file_name)
+            file_content = self.get_html_content_from_s3(uploaded_file)
         except Exception as e:
             return Response(
                 {"error": f"Error fetching file from S3: {str(e)}"},
@@ -1862,10 +1872,9 @@ class SubjectFileRowDeleteView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        existing_rows = subject_file.data  # Get the existing data
+        existing_rows = subject_file.data  
         row_to_delete = None
 
-        # Filter out the row with the given row_id
         updated_rows = []
         with transaction.atomic():
             for row in existing_rows:
@@ -1880,7 +1889,6 @@ class SubjectFileRowDeleteView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            # Save the updated rows back to the SubjectFile
             subject_file.data = updated_rows
             subject_file.save()
 
@@ -1891,7 +1899,7 @@ class SubjectFileRowDeleteView(APIView):
                 "file_name": subject_file.name,
                 "total_remaining_rows": len(updated_rows),
                 "created_at": subject_file.uploaded_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "rows": updated_rows,  # Returning updated row data
+                "rows": updated_rows,  
             },
             status=status.HTTP_200_OK,
         )

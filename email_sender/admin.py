@@ -108,7 +108,7 @@ class CampaignAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "user", 
-        "uploaded_file_name",
+        "uploaded_file",
         "display_name",
         "delay_seconds",
         "created_at",
