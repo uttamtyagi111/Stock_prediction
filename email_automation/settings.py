@@ -154,23 +154,23 @@ ASGI_APPLICATION = "email_automation.asgi.application"
 
 
 ##### ye wala DB use krna h render wale server per to esko uncomment krke niche vale ko comment krke deploy krna h
-import dj_database_url
+# import dj_database_url
 
-DATABASES = {"default": {}}
+# DATABASES = {"default": {}}
 
-database_url = os.environ.get("DATABASE_URL")
-DATABASES["default"] = dj_database_url.parse(database_url)
+# database_url = os.environ.get("DATABASE_URL")
+# DATABASES["default"] = dj_database_url.parse(database_url)
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': os.getenv('DB_ENGINE'),
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('DB_USER'),
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': os.getenv('DB_HOST'),
-#         'PORT': '',
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': os.getenv('DB_ENGINE'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+    }
+}
 
 
 DATABASE_ROUTERS = ["authentication.database_router.DatabaseRouter"]
@@ -227,7 +227,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = 587
+EMAIL_PORT = os.getenv("EMAIL_PORT")
 EMAIL_USE_TLS = True
 # EMAIL_USE_SSL = False  # Commented out as not used
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
