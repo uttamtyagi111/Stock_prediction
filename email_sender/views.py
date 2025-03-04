@@ -859,7 +859,7 @@ class CampaignListView(APIView):
                         "subject_file_id": campaign.subject_file_id,
                         "contact_list_id": campaign.contact_list_id,
                         "delay_seconds": campaign.delay_seconds,
-                        "uploaded_file_id": campaign.uploaded_file_id,
+                        "uploaded_file_name": campaign.uploaded_file.name,
                         "display_name": campaign.display_name,
                         "smtp_server_ids": list(
                             campaign.smtp_servers.values_list("id", flat=True)
