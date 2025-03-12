@@ -768,8 +768,6 @@ def registerPage(request):
         {"form_valid": form.is_valid(), "errors": form.errors},
         status=status.HTTP_400_BAD_REQUEST,
     )
-
-
 User = get_user_model()
 
 
