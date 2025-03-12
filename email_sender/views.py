@@ -10,15 +10,13 @@ from email_validator import validate_email, EmailNotValidError
 import dns.resolver
 from django.core.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.core.files.base import ContentFile
-from subscriptions.models import UserProfile, Plan
-from .serializers import EmailStatusLogSerializer
+from subscriptions.models import UserProfile
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import status, viewsets
+from rest_framework import status
 from django.core.mail import EmailMessage, get_connection
 from io import StringIO
 from django.template import Template, Context
-import csv, time, logging, os, boto3, time, uuid,json
+import csv, time, logging, boto3, time, uuid,json
 from django.conf import settings
 from .serializers import (
     CampaignSerializer,
@@ -492,7 +490,7 @@ from rest_framework.views import APIView
 
 
 class ContactFileUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated] 
 
     def put(self, request, file_id):
         """

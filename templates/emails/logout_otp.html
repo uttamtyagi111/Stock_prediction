@@ -1,66 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Your OTP for Logout Verification</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        color: #333;
-        background-color: #f7f7f7;
-        padding: 20px;
-      }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Email Verification</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
 
-      .email-container {
-        background-color: #ffffff;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      }
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin: 20px auto;">
+                    <!-- Logo Section -->
+                    <tr>
+                        <td align="center" style="padding: 20px;">
+                            <img src="https://emailbulkshoot.s3.ap-southeast-2.amazonaws.com/assests+for+Email+Automation/Techserve%404x.png" alt="Wish Geeks TechServe" style="max-width: 250px;">
+                        </td>
+                    </tr>
 
-      h2 {
-        color: #2c3e50;
-      }
+                 
 
-      p {
-        font-size: 16px;
-        line-height: 1.5;
-      }
-
-      .otp {
-        font-size: 20px;
-        font-weight: bold;
-        color: rgb(231, 123, 60);
-      }
-
-      .footer {
-        font-size: 14px;
-        color: #95a5a6;
-        margin-top: 20px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="email-container">
-      <h2>Your OTP for Logout Verification</h2>
-      <p>Dear {{ username }},</p>
-      <p>
-        We received a request to log you out of your device. Please use the
-        following One-Time Password (OTP) to complete the logout process:
-      </p>
-
-      <p class="otp">{{ otp }}</p>
-
-      <p>
-        The OTP is valid for 10 minutes. If you didn't request a logout, you can
-        ignore this email.
-      </p>
-
-      <div class="footer">
-        <p>Regards,</p>
-        <p>The Wish Geeks Techserve Team</p>
+                    <!-- Header Section -->
+<tr>
+    <td align="center" style="background-color: #ffffff;">
+      <div
+        style="
+          background: rgba(51, 141, 251, 1);
+          color: #ffffff;
+          padding: 10px;
+        "
+      >
+        <img
+          src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/lg.png"
+          alt="Sign Up"
+          style="width: 32px; height: 32px; margin-bottom: 10px"
+        />
+        <p style="font-size: 14px; font-weight: bold; margin: 0; font-family: inter, sans-serif;">
+            THANKS FOR SIGNING UP !<br>
+                <span style="font-size: 22px;">Verify Your Email Address</span>
+        </p>
       </div>
-    </div>
-  </body>
+    </td>
+  </tr><!-- Message Section -->
+  <tr>
+      <td align="left" style="padding: 10px 20px; font-size: 16px; color: #333333; font-family: inter, sans-serif;">
+          Dear <b>{{username}}</b>, <br><br>
+          Your OTP to complete the registration process is:
+      </td>
+  </tr>
+  
+  <!-- OTP Boxes -->
+  <tr>
+      <td align="left" style="padding: 5px 10px;">
+          <table cellspacing="12" cellpadding="10" border="0" style="font-family: inter, sans-serif; border-radius: 5px;">
+              <tr>
+                  <td style="border: 1px solid rgba(51, 141, 251, 1); font-size: 20px; width: 10px; height: 10px; border-radius: 3px;">{{123458997}}</td>
+                  <!-- <td style="border: 1px solid rgba(51, 141, 251, 1); font-size: 20px; width: 10px; height: 10px; border-radius: 3px;">2</td>
+                  <td style="border: 1px solid rgba(51, 141, 251, 1); font-size: 20px; width: 10px; height: 10px; border-radius: 3px;">3</td>
+                  <td style="border: 1px solid rgba(51, 141, 251, 1); font-size: 20px;width: 10px; height: 10px;border-radius: 3px;">5</td>
+                  <td style="border: 1px solid rgba(51, 141, 251, 1); font-size: 20px; width: 10px; height: 10px; border-radius: 3px;">6</td>
+                  <td style="border: 1px solid rgba(51, 141, 251, 1); font-size: 20px; width: 10px; height: 10px; border-radius: 3px;">7</td> -->
+              </tr>
+          </table> 
+      </td>
+  </tr>
+  
+
+                    <!-- Expiry Message -->
+                    <tr>
+                        <td align="left" style="padding: 10px; font-size: 14px; color: #333; font-family:inter, sans-serif;">
+                            It will expire in <span style="color: rgba(51, 141, 251, 1);; font-weight: bold;">4 minutes</span>. Please use it promptly to complete your registration.
+ 
+                        </td>
+                    </tr>
+
+                
+
+                    <!-- Footer Links -->
+                    <tr>
+                        <td align="center" style="background: rgba(51, 141, 251, 1); padding: 10px;">
+                          <!-- Social Media Icons Table (Centered) -->
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+                            <tr>
+                              <td style="padding-right: 15px; text-align: center;">
+                                <a href="https://www.instagram.com/wishgeeks/" style="text-decoration: none">
+                                  <div style="width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; border-radius: 50%;">
+                                    <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/image.png" alt="Instagram" style="width: 20px; height: 20px; object-fit: contain" />
+                                  </div>
+                                </a>
+                              </td>
+                      
+                              <td style="padding-right: 15px; text-align: center;">
+                                <a href="https://www.linkedin.com/company/wish-geeks/" style="text-decoration: none">
+                                  <div style="width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; border-radius: 50%;">
+                                    <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/image+(72).png" alt="LinkedIn" style="width:20px; height: 20px; object-fit: contain" />
+                                  </div>
+                                </a>
+                              </td>
+                      
+                              <td style="text-align: center;">
+                                <a href="https://www.facebook.com/wishgeeks" style="text-decoration: none">
+                                  <div style="width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; background-color: #ffffff; border-radius: 50%;">
+                                    <img src="https://wishgeekstechserve.s3.ap-southeast-2.amazonaws.com/image+(73).png" alt="Facebook" style="width: 20px; height: 20px; object-fit: contain" />
+                                  </div>
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                      
+                          <!-- Footer Links -->
+                          <table align="center" role="presentation">
+                            <tr>
+                              <td>
+                                <p style="color: #ffffff; font-size: 14px; margin: 0; padding: 10px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                                  <a href="" style="color: #fff; text-decoration: none;">  <span>Privacy Policy</span></a> 
+                                  <a href="" style="color: #fff; text-decoration: none;">  <span>Contact Us</span></a>
+                                  <a href="" style="color: #fff; text-decoration: none;">  <span>Unsubscribe</span></a>
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
 </html>
