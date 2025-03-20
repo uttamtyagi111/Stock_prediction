@@ -7,6 +7,10 @@ db.sqlite3
 backup.sql
 media
 
+# Ignore all migration files
+**/migrations/
+!**/migrations/__init__.py  # Keep the __init__.py file so Django recognizes the package
+
 # Backup files # 
 *.bak 
 

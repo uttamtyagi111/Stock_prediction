@@ -1,8 +1,7 @@
-from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
-    OutstandingToken,
 )
+from .serializers import EnquirySerializer
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,15 +11,19 @@ from django.core.cache import cache
 from .forms import OTPVerificationForm
 from django.http import JsonResponse
 from .forms import EmailLoginForm
+from django.utils import timezone
+from datetime import datetime
 from functools import cache
 import secrets
 from django.utils.timezone import now, timedelta
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 from django.shortcuts import render
 from django.contrib.auth import authenticate
+from rest_framework.exceptions import AuthenticationFailed
+import logging
 from django.contrib import messages
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from .forms import (
@@ -30,20 +33,21 @@ from .forms import (
     SetNewPasswordForm,
 )
 from .forms import OTPVerificationForm
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
 from .models import DeviceVerifyOTP, LoginOTP
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth.models import User
 from .forms import PasswordResetRequestForm
-from .utils import send_password_reset_email, send_logout_otp_email
+from .utils import send_password_reset_email, send_logout_otp_email,send_login_otp_email
 from subscriptions.models import UserProfile, UserDevice
 from django.shortcuts import render
 from .utils import generate_otp, send_otp_email, send_welcome_email
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from django.contrib.auth import authenticate, login as django_login, logout
+from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -69,7 +73,6 @@ class CustomTokenRefreshView(TokenRefreshView):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_logged_in_devices(request):
-    # Check if the user is authenticated
     if not request.user.is_authenticated:
         return Response({"error": "User is not authenticated"}, status=401)
 
@@ -91,102 +94,6 @@ def get_logged_in_devices(request):
         }
     )
 
-
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def loginPage(request):
-#     form = EmailLoginForm(data=request.data)
-
-#     if not form.is_valid():
-#         return Response({
-#             'form_valid': form.is_valid(),
-#             'errors': form.errors
-#         }, status=400)
-
-#     email = form.cleaned_data['email']
-#     password = form.cleaned_data['password']
-#     user = authenticate(request, email=email, password=password)
-
-#     if not user:
-#         return Response({'message': 'Email or password is incorrect.'}, status=400)
-
-#     if not user.is_active:
-#         return Response({'message': 'Account is inactive.'}, status=400)
-
-#     try:
-#         user_profile = UserProfile.objects.get(user=user)
-#     except UserProfile.DoesNotExist:
-#         return Response({'message': 'User profile not found.'}, status=400)
-
-#     plan_name = getattr(user_profile.current_plan, 'name', None)
-
-#     if plan_name:
-#         print(f"Plan Name: {plan_name}")
-#     else:
-#         print("No plan associated with this user.")
-
-#     if not plan_name or plan_name.lower() == "basic":
-#         device_limit = 1
-#     elif plan_name.lower() == "standard":
-#         device_limit = 3
-#     elif plan_name.lower() == "premium":
-#         device_limit = 5
-#     elif plan_name.lower() == "elite":
-#         device_limit = 15
-#     else:
-#         return Response({'message': 'Invalid plan name.'}, status=400)
-
-#     system_info = request.data.get('system_info')
-#     if not system_info:
-#         return Response({'message': 'System info is required.'}, status=400)
-
-#     if not check_device_limit(user_profile, system_info, device_limit):
-#         return Response({
-#             'message': f'Device limit exceeded. You can only log in on {device_limit} device(s) based on your {plan_name} plan. Please log out from other devices to log in.',
-#             'logged_in_devices': logged_in_devices(user_profile)
-#         }, status=200)
-
-#     if user_profile.is_2fa_enabled:
-#         Login.objects.filter(user=user, expires_at__lt= now()).delete()
-#         otp_instance = LoginOTP.objects.create(
-#             user=user,
-#             otp=generate_otp(),
-#             expires_at=now() + timedelta(minutes=5)  # OTP expires in 5 minutes
-#         )
-#         send_otp_email(user.email, user.username, otp_instance.otp)
-
-#         return Response({
-#             'message': 'OTP sent to your email. Please verify to complete login.',
-#             'redirect': 'verify_otp',  # Redirect to OTP verification page
-#             'user_id': user.id,
-#         }, status=200)
-#     else:
-#         # If 2FA is disabled, generate access and refresh tokens
-#         refresh = RefreshToken.for_user(user)
-#         access_token = str(refresh.access_token)
-#         refresh_token = str(refresh)
-
-#         # Handle device login (saving device info and tokens)
-#         existing_devices = UserDevice.objects.filter(user=user_profile.user)
-#         device_count = existing_devices.count()
-
-#         device_name = f"device{device_count + 1}"
-#         user_device = UserDevice.objects.create(
-#             user=user,
-#             device_name=device_name,
-#             system_info=system_info,
-#             token=refresh_token
-#         )
-
-#         return Response({
-#             'user_id': user.id,
-#             'access': access_token,
-#             'refresh': refresh_token,
-#             'system_info': system_info,
-#             "device_id": user_device.id,
-#             'redirect': 'home',  # Redirect to home after successful login
-#             'message': 'Login successful'
-#         })
 
 
 @api_view(["POST"])
@@ -214,7 +121,6 @@ def loginPage(request):
     except UserProfile.DoesNotExist:
         return Response({"message": "User profile not found."}, status=400)
 
-    # Plan aur device limit database se fetch karein
     current_plan = user_profile.current_plan
     plan_name = current_plan.name if current_plan else "Trial"
     device_limit = current_plan.device_limit if current_plan else 1
@@ -238,7 +144,7 @@ def loginPage(request):
         otp_instance = LoginOTP.objects.create(
             user=user, otp=generate_otp(), expires_at=now() + timedelta(minutes=5)
         )
-        send_otp_email(user.email, user.username, otp_instance.otp)
+        send_login_otp_email(user.email, user.username, otp_instance.otp)
 
         return Response(
             {
@@ -308,9 +214,6 @@ def verifyLoginOTP(request):
     if otp != otp_instance.otp:
         return Response({"message": "Invalid OTP."}, status=400)
 
-    # LoginOTP.objects.filter(user=user).delete()  # Delete old OTPs
-    # otp_instance = LoginOTP.objects.create(user=user, otp=otp)
-
     refresh = RefreshToken.for_user(user)
     access_token = str(refresh.access_token)
     refresh_token = str(refresh)
@@ -368,80 +271,6 @@ def request_logout_otp(request):
 
     except UserDevice.DoesNotExist:
         return Response({"error": "Invalid Device ID. Device not found."}, status=400)
-
-
-# class LogoutDeviceView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def post(self, request):
-#         device_id = request.data.get("device_id")
-#         system_info = request.data.get("system_info")
-#         otp = request.data.get("otp")
-
-#         if not device_id or not system_info or not otp:
-#             return Response(
-#                 {"error": "Device ID, OTP, and system info are required"},
-#                 status=HTTP_400_BAD_REQUEST,
-#             )
-
-#         device = get_object_or_404(UserDevice, id=device_id)
-#         user = device.user
-
-#         try:
-#             otp_record = DeviceVerifyOTP.objects.get(user=user, otp=otp)
-
-#             if otp_record.is_expired():
-#                 otp_record.delete()
-#                 return Response(
-#                     {"error": "OTP expired. Request a new one."},
-#                     status=HTTP_400_BAD_REQUEST,
-#                 )
-
-#             otp_record.delete()
-#         except DeviceVerifyOTP.DoesNotExist:
-#             return Response(
-#                 {"error": "Invalid OTP. Please try again."}, status=HTTP_400_BAD_REQUEST
-#             )
-
-#         try:
-#             old_refresh_token = device.token
-
-#             if not old_refresh_token:
-#                 return Response(
-#                     {"error": "No refresh token found for this device"},
-#                     status=HTTP_400_BAD_REQUEST,
-#                 )
-
-#             try:
-#                 old_token = RefreshToken(old_refresh_token)
-#                 old_token.blacklist()
-#             except Exception as e:
-#                 return Response(
-#                     {"error": f"Failed to blacklist old token: {str(e)}"},
-#                     status=HTTP_400_BAD_REQUEST,
-#                 )
-#             new_refresh_token = RefreshToken.for_user(user)
-#             new_access_token = str(new_refresh_token.access_token)
-            
-#             device.token = str(new_refresh_token) 
-#             device.system_info = system_info  
-#             device.save()
-                
-#             return Response(
-#                 {
-#                     "success": f"Device {device.device_name} logged out successfully.",
-#                     "user_id": user.id,
-#                     "device_id": device_id,
-#                     "access_token": new_access_token,
-#                     "refresh_token": str(new_refresh_token),
-#                     "message": "Device has been logged out and removed.",
-#                 },
-#                 status=HTTP_200_OK,
-#             )
-
-#         except Exception as e:
-#             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
-
 
 
 class LogoutDeviceView(APIView):
@@ -512,6 +341,7 @@ class LogoutDeviceView(APIView):
 
             device.token = str(new_refresh_token)
             device.system_info = system_info
+            device.created_at = timezone.make_aware(datetime.now())  
             device.save()
 
             return Response(
@@ -544,34 +374,6 @@ def check_device_limit(user_profile, system_info, device_limit):
     return existing_devices_count < allowed_limit
 
 
-# def check_device_limit(user_profile, system_info,device_limit):
-#     """
-#     Checks if the user has exceeded the allowed device limit.
-#     """
-
-#     if user_profile.plan_name == None:
-#         existing_devices = UserDevice.objects.filter(user=user_profile.user)
-#         if existing_devices.count() >= 1:
-#             return False
-#     elif user_profile.plan_name == 'Basic':
-#         existing_devices = UserDevice.objects.filter(user=user_profile.user)
-#         if existing_devices.count() >= 1:
-#             return False
-#     elif user_profile.plan_name == 'Standard':
-#         existing_devices = UserDevice.objects.filter(user=user_profile.user)
-#         if existing_devices.count() >= 3:
-#             return False
-#     elif user_profile.plan_name == 'Premium':
-#         existing_devices = UserDevice.objects.filter(user=user_profile.user)
-#         if existing_devices.count() >= 5:
-#             return False
-#     elif user_profile.plan_name == 'Elite':
-#         existing_devices = UserDevice.objects.filter(user=user_profile.user)
-#         if existing_devices.count() >= 15:
-#             return False
-#     return True
-
-
 def logged_in_devices(user_profile):
     """
     Returns the list of devices the user is logged in on.
@@ -587,12 +389,7 @@ def logged_in_devices(user_profile):
     ]
     return devices_info
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.tokens import RefreshToken
-import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -607,7 +404,6 @@ def logout_view(request):
             logger.warning(f"User {user.email} attempted logout without a device ID.")
             return Response({"message": "Device ID is required."}, status=400)
 
-        # Prevent 404 exception by using filter().first()
         device = UserDevice.objects.filter(id=device_id).first()
         if not device:
             logger.warning(f"User {user.email} attempted to logout, but device {device_id} was not found.")
@@ -643,52 +439,6 @@ def logout_view(request):
     except Exception as e:
         logger.exception(f"Unexpected error during logout for user {request.user.email}: {str(e)}")
         return Response({"message": f"Error: {str(e)}"}, status=500)
-
-
-
-
-# @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
-# def logout_view(request):
-#     try:
-#         device_id = request.data.get("device_id")
-
-#         if not device_id:
-#             return Response({"message": "Device ID is required."}, status=400)
-
-#         device = get_object_or_404(UserDevice, id=device_id)
-
-#         if device.user != request.user:
-#             return Response(
-#                 {"message": "You do not have permission to remove this device."},
-#                 status=403,
-#             )
-
-#         refresh_token = device.token
-
-#         if not refresh_token:
-#             return Response(
-#                 {"message": "No refresh token found for this device."}, status=400
-#             )
-
-#         try:
-#             token = RefreshToken(refresh_token)
-#             token.blacklist()
-#         except Exception as e:
-#             return Response(
-#                 {"message": f"Error blacklisting token: {str(e)}"}, status=400
-#             )
-
-#         device.delete()
-
-#         return Response(
-#             {"message": "Logout successful and device removed."}, status=200
-#         )
-
-#     except InvalidToken:
-#         return Response({"message": "Invalid token"}, status=400)
-#     except Exception as e:
-#         return Response({"message": f"Error: {str(e)}"}, status=500)
 
 
 @api_view(["POST"])
@@ -793,7 +543,10 @@ def verify_otp(request):
                     user.is_active = True
                     user.set_password(user_data["password"])
                     user.save()
-                    send_welcome_email(user)
+
+                    user_profile, _ = UserProfile.objects.get_or_create(user=user)
+                    expiration_date = user_profile.plan_expiration_date
+                    send_welcome_email(user, expiration_date)
 
                 cache.delete(f'otp_{request.data.get("email")}')
                 cache.delete(f'register_data_{request.data.get("email")}')
@@ -966,23 +719,15 @@ def get_2fa_status(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.mail import send_mail
-from .models import Enquiry
-from .serializers import EnquirySerializer
-from django.conf import settings
-
 class EnquiryView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = EnquirySerializer(data=request.data)
-        
+
         if serializer.is_valid():
             enquiry = serializer.save()
-            
+
             # Send email to admin
             admin_email_subject = f"New Enquiry from {enquiry.name}"
             admin_email_body = f"""
@@ -996,22 +741,32 @@ class EnquiryView(APIView):
                 admin_email_subject,
                 admin_email_body,
                 settings.DEFAULT_FROM_EMAIL,
-                [settings.ADMIN_EMAIL],  # Replace with your email
+                [settings.ADMIN_EMAIL],  # Replace with your admin email
                 fail_silently=False,
             )
 
-            # Send confirmation email to user
+            # Render HTML email template for user confirmation
             user_email_subject = "Enquiry Received"
-            user_email_body = f"Dear {enquiry.name},\n\nThank you for reaching out! We have received your enquiry and will get back to you soon.\n\nBest Regards,\nYour Company"
-            
-            send_mail(
-                user_email_subject,
-                user_email_body,
-                settings.DEFAULT_FROM_EMAIL,
-                [enquiry.email],
-                fail_silently=False,
+            user_email_body = render_to_string('authentication\enquiry_confirmation.html', {
+                'name': enquiry.name,
+                'phone': enquiry.phone,
+                'email': enquiry.email,
+                'subject': enquiry.subject,
+                'description': enquiry.description
+            })
+
+            # Send email with both plain text and HTML content
+            email = EmailMultiAlternatives(
+                subject=user_email_subject,
+                body="Your enquiry has been received.",  # Fallback text version
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[enquiry.email]
             )
+            email.attach_alternative(user_email_body, "text/html")
+            email.send()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+

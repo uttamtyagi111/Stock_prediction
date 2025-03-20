@@ -68,7 +68,7 @@ def send_welcome_email(user):
     """
     # Welcome email content
     html_content = render_to_string(
-        'emails/welcome_email.html',  # Template path for the welcome email
+        'authentication/welcome_email.html',  # Template path for the welcome email
         {'username': user.username}  # Context for the template
     )
     subject = 'Welcome to Wish Geeks Techserve!'

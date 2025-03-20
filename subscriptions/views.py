@@ -1,3 +1,4 @@
+from rest_framework.permissions import AllowAny
 from django.shortcuts import redirect
 import base64
 import hashlib
@@ -9,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from .utils import send_email_with_pdf
+from .utils import send_plan_purchase_email_with_pdf,send_plan_upgrade_email_with_pdf
 from django.conf import settings
 from datetime import timedelta
 import razorpay
@@ -277,7 +278,7 @@ def handle_payment_callback(request):
         user_profile.razorpay_payment_id = razorpay_payment_id
         user_profile.save()
 
-        send_email_with_pdf(
+        send_plan_purchase_email_with_pdf(
             transaction_id=razorpay_payment_id,
             plan_name=plan.name,
             price=plan.price,
@@ -308,7 +309,7 @@ def initiate_payment(request):
     try:
         data = request.data
         merchant_transaction_id = data.get("transactionId")
-        name = data.get("name")
+        # name = data.get("name")
         amount = data.get("amount")
         mobile = data.get("mobile")
         plan_name = data.get("plan_name")
@@ -323,7 +324,7 @@ def initiate_payment(request):
 
         required_fields = {
             "transactionId": merchant_transaction_id,
-            "name": name,
+            # "name": name,
             "mobile": mobile,
             "plan_name": plan_name,
             "address_line1": address_line1,
@@ -376,11 +377,11 @@ def initiate_payment(request):
             "merchantId": MERCHANT_ID,
             "merchantTransactionId": merchant_transaction_id,
             "message": "Payment Initiated",
-            "name": name,
+            # "name": name,
             "amount": amount,
             "redirectUrl": f"https://backend.wishgeeksdigital.com/verify-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
-            "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
+            "callbackUrl": f"https://wishgeeksditial.com/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
             "paymentInstrument": {"type": "PAY_PAGE"},
         }
@@ -402,9 +403,9 @@ def initiate_payment(request):
 
         if response.status_code == 200 and response_data.get("success"):
             user_profile.phonepe_transaction_id = merchant_transaction_id
-            user_profile.current_plan = plan
-            user_profile.plan_status = "inactive" 
-            user_profile.payment_status = "initiated"
+            # user_profile.current_plan = plan
+            # user_profile.plan_status = "inactive" 
+            # user_profile.payment_status = "initiated"
             user_profile.pending_plan_id = plan.id
             user_profile.save()
 
@@ -419,7 +420,6 @@ def initiate_payment(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-from rest_framework.permissions import AllowAny
 
 
 @api_view(["POST"])
@@ -457,8 +457,8 @@ def verify_payment(request):
             if payment_status == "success":
                 plan = Plan.objects.get(id=user_profile.pending_plan_id)
                 user_profile.activate_plan(plan)
-                user_profile.plan_status = "active" 
-                user_profile.payment_status = "paid" 
+                # user_profile.plan_status = "active" 
+                # user_profile.payment_status = "paid" 
                 user_profile.save()
 
             if payment_status == "":
@@ -466,22 +466,54 @@ def verify_payment(request):
                     id=user_profile.pending_plan_id
                 )  
 
-                user_profile.activate_plan(plan)
+                user_profile.current_plan = plan
+                user_profile.plan_name = plan.name
+                user_profile.plan_status = "active"
+                user_profile.plan_start_date = timezone.now()
+                user_profile.plan_expiration_date = timezone.now() + timedelta(days=plan.duration_days)
+                user_profile.payment_status = "paid"
+                user_profile.emails_sent = 0
+                user_profile.email_limit = plan.email_limit
+                user_profile.devie_limit = plan.device_limit
+                user_profile.pending_plan_id = None
+                user_profile.save()
+                logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
+                
+                plan_name = user_profile.plan_name
+                plan_price = plan.price
+                email_limit = user_profile.email_limit
+                device_limit = user_profile.device_limit
+                plan_start_date = user_profile.plan_start_date
+                plan_expiration_date = user_profile.plan_expiration_date
+                user_email = user_profile.user.email
+                user_name = user_profile.user.username
 
-                send_email_with_pdf(
+                send_plan_purchase_email_with_pdf(
                     transaction_id=merchant_transaction_id,
-                    plan_name=plan.name,
-                    price=plan.price,
-                    expiry_date=user_profile.plan_expiration_date,
-                    user_email=user_profile.user.email,
+                    plan_name=plan_name,
+                    price=plan_price,  
+                    expiry_date=plan_expiration_date, 
+                    user_email=user_email,
+                    email_limit=email_limit,
+                    device_limit=device_limit,
+                    duration_days=plan.duration_days,
+                    plan_start_date=plan_start_date.strftime("%d %B %Y"),
+                    plan_expiration_date=plan_expiration_date.strftime("%d %B %Y"),
+                    user_name=user_name, 
+                    user_address_line1=user_profile.address_line1,  
+                    user_address_line2=user_profile.address_line2, 
+                    user_city=user_profile.city,
+                    user_state=user_profile.state,
+                    user_zip_code=user_profile.zip_code, 
+                    user_country=user_profile.country,
                 )
-                return redirect("http://localhost:8000/payment-success")
+                return redirect("https://wishgeeksdigital.com/payment-success")
             else:
                 user_profile.plan_status = "inactive"
                 user_profile.payment_status = payment_status
                 user_profile.save()
 
-                return redirect("http://localhost:8000/payment-failed")
+                return redirect("https://wishgeeksdigital.com/payment-failed")
         else:
             return JsonResponse(
                 {"error": response_data.get("message", "Payment verification failed.")},
@@ -550,7 +582,7 @@ def upgrade_plan(request):
             "amount": amount,
             "redirectUrl": f"https://backend.wishgeeksdigtal.com/verify-upgrade-payment/?id={merchant_transaction_id}",
             "redirectMode": "POST",
-            "callbackUrl": f"http://localhost:3000/payment-success?id={merchant_transaction_id}",
+            "callbackUrl": f"https://wishgeeksdigital.com/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
             "paymentInstrument": {"type": "PAY_PAGE"},
         }
@@ -573,8 +605,8 @@ def upgrade_plan(request):
         if response.status_code == 200 and response_data.get("success"):
             user_profile.phonepe_transaction_id = merchant_transaction_id
             user_profile.pending_plan_id = new_plan.id
-            user_profile.plan_status = "inactive"  # Until payment is confirmed
-            user_profile.payment_status = "initiated"
+            # user_profile.plan_status = "inactive"  # Until payment is confirmed
+            # user_profile.payment_status = "initiated"
             user_profile.save()
 
             redirect_url = response_data["data"]["instrumentResponse"]["redirectInfo"]["url"]
@@ -649,29 +681,53 @@ def verify_upgrade_payment(request):
                 user_profile.plan_start_date = timezone.now()
                 user_profile.plan_expiration_date = new_expiration_date
                 user_profile.email_limit += new_plan.email_limit
+                user_profile.device_limit = new_plan.device_limit  # Assuming device_limit is on the plan
                 user_profile.pending_plan_id = None
                 user_profile.save()
                 logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
 
-                # Send Confirmation Email
-                send_email_with_pdf(
+                # Retrieve the saved data for email
+                plan_name = user_profile.plan_name
+                plan_price = new_plan.price
+                email_limit = user_profile.email_limit
+                device_limit = user_profile.device_limit
+                plan_start_date = user_profile.plan_start_date
+                plan_expiration_date = user_profile.plan_expiration_date
+                user_email = user_profile.user.email
+                user_name = user_profile.user.username
+
+                # Send Confirmation Email with the saved data from the database
+                send_plan_upgrade_email_with_pdf(
                     transaction_id=merchant_transaction_id,
-                    plan_name=new_plan.name,
-                    price=new_plan.price,
-                    expiry_date=new_expiration_date,
-                    user_email=user_profile.user.email,
+                    plan_name=plan_name,
+                    price=plan_price,  
+                    expiry_date=plan_expiration_date, 
+                    user_email=user_email,
+                    email_limit=email_limit,
+                    device_limit=device_limit,
+                    duration_days=new_plan.duration_days,
+                    plan_start_date=plan_start_date.strftime("%d %B %Y"),
+                    plan_expiration_date=plan_expiration_date.strftime("%d %B %Y"),
+                    user_name=user_name, 
+                    user_address_line1=user_profile.address_line1,  
+                    user_address_line2=user_profile.address_line2, 
+                    user_city=user_profile.city,
+                    user_state=user_profile.state,
+                    user_zip_code=user_profile.zip_code, 
+                    user_country=user_profile.country,
                 )
+
                 logger.info(f"Confirmation email sent to {user_profile.user.email}")
 
-                return JsonResponse({"message": "Payment successful! Plan upgraded."}, status=200)
+                return redirect("https://wishgeeksdigital.com/payment-success",status=200)
 
             elif payment_status == "FAILED":
                 logger.warning(f"Payment failed for Transaction ID: {merchant_transaction_id}")
-                user_profile.payment_status = "failed"
+                # user_profile.payment_status = "failed"
                 user_profile.phonepe_transaction_id = None
                 user_profile.pending_plan_id = None
                 user_profile.save()
-                return JsonResponse({"message": "Payment failed."}, status=400)
+                return redirect("https://wishgeeksdigital.com/payment-failed",status=400)
 
             elif payment_status == "PENDING":
                 logger.info(f"Payment pending for Transaction ID: {merchant_transaction_id}")

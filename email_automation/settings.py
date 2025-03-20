@@ -38,9 +38,9 @@ ALLOWED_HOSTS = [
 
 ### esko production par uncomment krna h
 ###### render wale me eski jrurt nahi hai
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_SSL_REDIRECT = True
 
 CSRF_TRUSTED_ORIGINS = [
     "https://django-api-aqlo.onrender.com",
