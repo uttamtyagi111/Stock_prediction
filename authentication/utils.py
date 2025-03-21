@@ -59,7 +59,7 @@ def send_password_reset_email(user, base_url):
     email_message.send()
 
 
-def send_welcome_email(user):
+def send_welcome_email(user,plan_expiration_date):
     """
     Sends a welcome email to the specified user after successful registration.
 
@@ -69,7 +69,7 @@ def send_welcome_email(user):
     # Welcome email content
     html_content = render_to_string(
         'authentication/welcome_email.html',  # Template path for the welcome email
-        {'username': user.username}  # Context for the template
+        {'username': user.username,'plan_expiration_date': plan_expiration_date}  # Context for the template
     )
     subject = 'Welcome to Wish Geeks Techserve!'
     from_email = settings.DEFAULT_FROM_EMAIL

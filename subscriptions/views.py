@@ -421,7 +421,6 @@ def initiate_payment(request):
 
 
 
-
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def verify_payment(request):
@@ -474,7 +473,7 @@ def verify_payment(request):
                 user_profile.payment_status = "paid"
                 user_profile.emails_sent = 0
                 user_profile.email_limit = plan.email_limit
-                user_profile.devie_limit = plan.device_limit
+                user_profile.current_plan.device_limit = plan.device_limit
                 user_profile.pending_plan_id = None
                 user_profile.save()
                 logger.info(f"UserProfile updated successfully for {user_profile.user.email}")
@@ -482,11 +481,12 @@ def verify_payment(request):
                 plan_name = user_profile.plan_name
                 plan_price = plan.price
                 email_limit = user_profile.email_limit
-                device_limit = user_profile.device_limit
+                device_limit = user_profile.current_plan.device_limit
                 plan_start_date = user_profile.plan_start_date
                 plan_expiration_date = user_profile.plan_expiration_date
                 user_email = user_profile.user.email
                 user_name = user_profile.user.username
+                print(user_name)
 
                 send_plan_purchase_email_with_pdf(
                     transaction_id=merchant_transaction_id,
@@ -498,7 +498,7 @@ def verify_payment(request):
                     device_limit=device_limit,
                     duration_days=plan.duration_days,
                     plan_start_date=plan_start_date.strftime("%d %B %Y"),
-                    plan_expiration_date=plan_expiration_date.strftime("%d %B %Y"),
+                    plan_expiration_date=plan_expiration_date.strftime("%Y-%m-%d %H:%M:%S"),
                     user_name=user_name, 
                     user_address_line1=user_profile.address_line1,  
                     user_address_line2=user_profile.address_line2, 
@@ -507,13 +507,13 @@ def verify_payment(request):
                     user_zip_code=user_profile.zip_code, 
                     user_country=user_profile.country,
                 )
-                return redirect("https://wishgeeksdigital.com/payment-success")
+                return redirect("https://wishgeeksdigital.com/payment-success",status=200)
             else:
                 user_profile.plan_status = "inactive"
                 user_profile.payment_status = payment_status
                 user_profile.save()
 
-                return redirect("https://wishgeeksdigital.com/payment-failed")
+                return redirect("https://wishgeeksdigital.com/payment-failed",status=400)
         else:
             return JsonResponse(
                 {"error": response_data.get("message", "Payment verification failed.")},

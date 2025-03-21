@@ -544,9 +544,9 @@ def verify_otp(request):
                     user.set_password(user_data["password"])
                     user.save()
 
-                    user_profile, _ = UserProfile.objects.get_or_create(user=user)
-                    expiration_date = user_profile.plan_expiration_date
-                    send_welcome_email(user, expiration_date)
+                    user_profile = UserProfile.objects.get(user=user)
+                    plan_expiration_date = user_profile.plan_expiration_date
+                    send_welcome_email(user,plan_expiration_date)
 
                 cache.delete(f'otp_{request.data.get("email")}')
                 cache.delete(f'register_data_{request.data.get("email")}')
