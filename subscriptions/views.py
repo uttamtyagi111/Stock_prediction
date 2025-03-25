@@ -570,9 +570,9 @@ def upgrade_plan(request):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Payment Process
-        amount = int(new_plan.price) * 100  # Convert to paise
+        amount = int(new_plan.price) * 100  
         merchant_transaction_id = f'upgrade_{timezone.now().strftime("%Y%m%d%H%M%S")}'
-        mobile = request.user.profile.mobile    # Ensure phone number is stored in profile
+        mobile = request.user.profile.mobile    
 
         payload = {
             "merchantId": MERCHANT_ID,
@@ -581,7 +581,7 @@ def upgrade_plan(request):
             "name": request.user.username,
             "amount": amount,
             "redirectUrl": f"https://backend.wishgeeksdigital.com/verify-upgrade-payment/?id={merchant_transaction_id}",
-            "redirectMode": "POST",
+            "redirectMode":"GET",
             "callbackUrl": f"https://wishgeeksdigital.com/payment-success?id={merchant_transaction_id}",
             "mobileNumber": mobile,
             "paymentInstrument": {"type": "PAY_PAGE"},
@@ -640,7 +640,7 @@ from .models import UserProfile, Plan
 from .utils import send_plan_upgrade_email_with_pdf
 logger = logging.getLogger(__name__)
 
-@api_view(["GET"])
+@api_view(["GET","POST"])
 @permission_classes([AllowAny])
 def verify_upgrade_payment(request):
     """
