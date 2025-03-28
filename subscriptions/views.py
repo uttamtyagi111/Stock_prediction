@@ -15,7 +15,7 @@ from django.conf import settings
 from datetime import timedelta
 import razorpay
 import logging
-from .models import Plan, UserProfile
+from .models import Plan, UserProfile,PaymentStatus
 from razorpay.errors import BadRequestError, ServerError
 
 
@@ -463,6 +463,14 @@ def verify_payment(request):
             if payment_status == "":
                 plan = Plan.objects.get(
                     id=user_profile.pending_plan_id
+                )
+                PaymentStatus.objects.create(
+                user=user_profile.user,
+                transaction_id=merchant_transaction_id,
+                # actual_transaction_id=actual_transaction_id,
+                amount=plan.price,
+                plan=plan.name,
+                status="paid"
                 )  
 
                 user_profile.current_plan = plan
@@ -691,6 +699,14 @@ def verify_upgrade_payment(request):
                     existing_expiration_date = user_profile.plan_expiration_date
                     new_expiration_date = (
                         existing_expiration_date if existing_expiration_date else timezone.now() + timedelta(days=30)
+                    )
+                    PaymentStatus.objects.create(
+                    user=user_profile.user,
+                    transaction_id=merchant_transaction_id,
+                    # actual_transaction_id=actual_transaction_id,
+                    amount=new_plan.price,
+                    plan=new_plan.name,
+                    status="paid"
                     )
 
                     user_profile.plan_name = new_plan.name
