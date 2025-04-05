@@ -595,7 +595,7 @@ class DeleteContactListView(APIView):
 class ContactUnsubscribeView(APIView):
     permission_classes = [AllowAny]
 
-    def delete(self, request, contact_file_id, contact_id):
+    def get(self, request, contact_file_id, contact_id):
         try:
             contact = Contact.objects.get(
                 id=contact_id, contact_file_id=contact_file_id
@@ -931,39 +931,38 @@ class SendEmailsView(APIView):
             return False
         
     def check_email_exists(self,email):
-        """Check if the email exists by performing SMTP validation."""
-        domain = email.split('@')[-1]
-        
-        try:
-            # Resolve the MX record for the domain
-            answers = dns.resolver.resolve(domain, 'MX')
-            mx_record = str(answers[0].exchange)
+            """Check if the email exists by performing SMTP validation."""
+            domain = email.split('@')[-1]
             
-            # Create an SMTP connection to the mail server
-            server = smtplib.SMTP(mx_record)
-            server.set_debuglevel(0)  # Disable debug output
-            
-            # Send the EHLO command to the server to identify ourselves
-            server.helo()
-            
-            # Perform the VRFY command to verify the email address
-            code, message = server.verify(email)
-            
-            # Check response code
-            if code == 250:
-                logger.info(f"Email {email} exists on the server.")
-                return True  # Email exists
-            else:
-                logger.info(f"Email {email} does not exist.")
-                return False  # Email does not exist
-        except (smtplib.SMTPException, dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, Exception) as e:
-            logger.error(f"Error checking existence of email {email}: {str(e)}")
-            return False  # Assume the email doesn't exist in case of error
-        finally:
             try:
-                server.quit()  # Close the connection
-            except:
-                pass
+                # Resolve the MX record for the domain
+                answers = dns.resolver.resolve(domain, 'MX')
+                mx_record = str(answers[0].exchange)
+                try:
+                    server = smtplib.SMTP(mx_record)
+                    server.set_debuglevel(0)
+                    server.helo()
+                    sender_email = "developer@wishgeekstechserve.com"  # Use a valid sender email
+                    code, message = server.mail(sender_email)
+                    code, message = server.rcpt(email)  # Use RCPT TO instead of VRFY
+                    if code == 250:
+                        logger.info(f"Email {email} exists on the server.")
+                        return True
+                    else:
+                        logger.info(f"Email {email} does not exist or verification failed (temporary issue).")
+                        return False
+                except Exception as e:
+                    logger.error(f"Error checking existence of email {email}: {str(e)}")
+                    return False
+
+            except (smtplib.SMTPException, dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, Exception) as e:
+                logger.error(f"Error checking existence of email {email}: {str(e)}")
+                return False  # Assume the email doesn't exist in case of error
+            finally:
+                try:
+                    server.quit()  # Close the connection
+                except:
+                    pass
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -1225,7 +1224,7 @@ class SendEmailsView(APIView):
                 contact_id = None
             file_id = contact_file.id
 
-            unsubscribe_url = f"{request.scheme}://{request.get_host()}/contact-files/{file_id}/unsubscribe/{contact_id}/"
+            unsubscribe_url = f"https://backend.wishgeeksdigital.com/contact-files/{file_id}/unsubscribe/{contact_id}/"
             # subject_file_data = SubjectFile.objects.get(id=subject_file.id, user=user)
             subject = subject_data[i % len(subject_data)]  # Correctly select the subject using modulo
             subject_value = subject.get("Subject", "Default Subject")  # Get the subject value safely
